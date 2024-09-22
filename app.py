@@ -20,7 +20,7 @@ load_dotenv()
 genai.configure(api_key=os.getenv("GOOGLE_API_KEY"))
 
 # Define the model name
-model_name = 'models/gemini-1.5-flash-exp-0827'
+model_name = 'models/gemini-1.5-flash'
 
 # Initialize the GenerativeModel once using the model_name
 model = genai.GenerativeModel(model_name)
