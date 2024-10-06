@@ -4,11 +4,12 @@ import string
 import secrets
 import logging
 from datetime import datetime, timedelta
-from threading import Lock
+from threading import RLock  # Changed from Lock to RLock
 
 from flask import Flask, Response, request, current_app, make_response
 from dotenv import load_dotenv
 from twilio.rest import Client
+from twilio.twiml.messaging_response import MessagingResponse  # Added MessagingResponse import
 
 import google.generativeai as genai
 from google.api_core import exceptions as google_exceptions
@@ -18,7 +19,7 @@ logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
 
 # Load environment variables
-load_dotenv()
+load_dotenv('.env')  # Explicitly loading from .env file
 
 # Configure the Generative AI library with your API key
 genai.configure(api_key=os.getenv("GOOGLE_API_KEY"))
@@ -63,7 +64,7 @@ safety_settings = [
 # In-memory dictionary to simulate user data
 # Note: Consider using a persistent database in production
 users = {}
-users_lock = Lock()
+users_lock = RLock()
 
 def get_user(phone_number):
     with users_lock:
@@ -229,8 +230,8 @@ def bot():
                     )
                     logger.info(f"Welcome message sent successfully. SID: {message.sid}")
                 except Exception as e:
-                    logger.error(f"Failed to send welcome message to {from_number}. Error: {str(e)}")
-                    return "An error occurred while sending the welcome message.", 500
+                    logger.exception(f"Failed to send welcome message: {e}")
+                    return str(MessagingResponse()), 500
 
             if not user.get("conversation_started", False):
                 if incoming_msg.upper() != user["access_code"]:
@@ -362,10 +363,11 @@ def bot():
             )
             logger.info(f"AI response message sent successfully. SID: {message.sid}")
         except Exception as e:
-            logger.exception("Error sending AI response via Twilio REST API")
-            return "An error occurred while sending the message.", 500
+            logger.exception(f"Failed to send AI response: {e}")
+            return str(MessagingResponse()), 500
 
-        return '', 200
+        resp = MessagingResponse()
+        return str(resp)
 
     except Exception as e:
         logger.exception(f"Unhandled error in bot route: {str(e)}")
