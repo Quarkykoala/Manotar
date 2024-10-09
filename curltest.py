@@ -1,7 +1,7 @@
 import subprocess
 
 # Define the curl command
-url = 'http://localhost:8080/test_twilio'  # Assuming you're running the Flask app locally
+url = 'http://localhost:8080/test_twilio'  # Ensure this matches your Flask app's endpoint
 command = ['curl', url]
 
 # Execute the curl command
