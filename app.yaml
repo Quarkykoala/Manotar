@@ -1,9 +1,17 @@
 runtime: python39
+
 entrypoint: gunicorn -b :$PORT app:app
 
 env_variables:
-  FLASK_APP: app
-  FLASK_ENV: production
+  DB_USER: 'root'
+  DB_PASS: 'Hesogamol_01'
+  DB_NAME: 'clients'
+  DB_CONNECTION_NAME: 'mental-health-bot-430515:asia-south1:manobal-01'
+  TWILIO_ACCOUNT_SID: 'AC48e52113db34586361c7651fb1cf43bd'
+  TWILIO_AUTH_TOKEN: 'a94c8baf82099ad9b86fbec0e31ea2d9'
+  TWILIO_WHATSAPP_NUMBER: '+14155238886'
+  GOOGLE_API_KEY: 'AIzaSyAEpYZd_kksVLiXD_U4tmGqlNN-ZP3KfpI'
+  FLASK_DEBUG: 'False'
 
 beta_settings:
   cloud_sql_instances: mental-health-bot-430515:asia-south1:manobal-01
