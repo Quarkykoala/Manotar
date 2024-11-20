@@ -22,6 +22,10 @@ from nltk.tokenize import word_tokenize
 from nltk.corpus import stopwords
 import nltk
 
+# Configure logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
 # Initialize Flask app
 app = Flask(__name__)
 
@@ -29,34 +33,32 @@ app = Flask(__name__)
 load_dotenv()
 
 # Configure the database
-db_user = os.getenv("DB_USER")
-db_pass = os.getenv("DB_PASS")
-db_name = os.getenv("DB_NAME")
-db_host = os.getenv("DB_HOST")
-db_connection_name = os.getenv("DB_CONNECTION_NAME")
+db_user = os.getenv("DB_USER", "doadmin")
+db_pass = os.getenv("DB_PASS", "AVNS_mWRasgqERtw0wOMvz8S")
+db_host = os.getenv("DB_HOST", "db-mysql-blr1-03087-do-user-18364467-0.h.db.ondigitalocean.com")
+db_port = os.getenv("DB_PORT", "25060")
+db_name = os.getenv("DB_NAME", "defaultdb")
 
-# Determine the environment based on the operating system
-if os.getenv('GAE_ENV', '').startswith('standard'):
-    # Running on Google App Engine, use Unix socket
-    app.config['SQLALCHEMY_DATABASE_URI'] = (
-        f'mysql+pymysql://{db_user}:{db_pass}@/{db_name}'
-        f'?unix_socket=/cloudsql/{db_connection_name}'
-    )
-    logger = logging.getLogger(__name__)
-    logging.basicConfig(level=logging.INFO)
-    logger.info("Operating System: Unix-like")
-    logger.info(f"SQLALCHEMY_DATABASE_URI: {app.config['SQLALCHEMY_DATABASE_URI']}")
-else:
-    # Running locally or in a different environment, use TCP connection
-    app.config['SQLALCHEMY_DATABASE_URI'] = (
-        f'mysql+pymysql://{db_user}:{db_pass}@{db_host}/{db_name}'
-    )
-    logger = logging.getLogger(__name__)
-    logging.basicConfig(level=logging.INFO)
-    logger.info("Operating System: Windows")
-    logger.info(f"SQLALCHEMY_DATABASE_URI: {app.config['SQLALCHEMY_DATABASE_URI']}")
+# SSL configuration for MySQL
+ssl_args = {
+    'ssl': {
+        'rejectUnauthorized': True,
+    }
+}
 
-app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+# Update the database URI configuration with SSL
+app.config['SQLALCHEMY_DATABASE_URI'] = (
+    f'mysql+pymysql://{db_user}:{db_pass}@{db_host}:{db_port}/{db_name}'
+)
+app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
+    'connect_args': ssl_args
+}
+
+# Add debug logging
+logger.info(f"Connecting to database at {db_host}:{db_port}")
+logger.info(f"Database Host: {db_host}")
+logger.info(f"Database Port: {db_port}")
+logger.info(f"Database Name: {db_name}")
 
 # Initialize database
 db = SQLAlchemy(app)
@@ -104,7 +106,7 @@ client = Client(account_sid, auth_token)
 genai.configure(api_key=os.getenv("GOOGLE_API_KEY"))
 
 # Initialize the Gemini model
-model = genai.GenerativeModel("gemini-1.5-pro")
+model = genai.GenerativeModel("gemini-1.5-flash-002")
 
 # Define the system prompt
 system_prompt = """
@@ -204,11 +206,35 @@ AUTHENTICATION_DURATION = timedelta(days=30)  # Example duration
 @app.route("/bot", methods=['POST'])
 def bot():
     try:
+        # Add debug logging
+        logger.info("Received webhook request")
+        logger.info(f"Request values: {request.values}")
+        
         incoming_msg = request.values.get('Body', '').strip()
         from_number = request.values.get('From', '').strip()
 
+        logger.info(f"Incoming message: {incoming_msg}")
+        logger.info(f"From number: {from_number}")
+
         # Sanitize incoming message
         incoming_msg = re.sub(r'[^\w\s.,!?]', '', incoming_msg)
+
+        # Normalize from_number by stripping 'whatsapp:'
+        if from_number.startswith('whatsapp:'):
+            from_number = from_number[len('whatsapp:'):]
+
+        logger.info(f"Normalized from_number: {from_number}")
+        
+        # Add debug for Twilio client
+        try:
+            test_message = client.messages.create(
+                body="Debug: Received your message",
+                from_=f'whatsapp:{twilio_whatsapp_number}',
+                to=f'whatsapp:{from_number}'
+            )
+            logger.info(f"Test message sent. SID: {test_message.sid}")
+        except Exception as e:
+            logger.error(f"Twilio error: {str(e)}")
 
         # Normalize from_number by stripping 'whatsapp:'
         if from_number.startswith('whatsapp:'):
@@ -425,6 +451,30 @@ def get_keyword_stats():
 @app.route('/')
 def health_check():
     return jsonify({"status": "healthy"}), 200
+
+@app.route('/init_db')
+def init_db():
+    try:
+        # Test connection first
+        with db.engine.connect() as conn:
+            logger.info("Database connection successful")
+        
+        # Create tables
+        db.create_all()
+        logger.info("Tables created successfully")
+        
+        return jsonify({
+            "status": "success",
+            "message": "Database initialized successfully",
+            "database_url": app.config['SQLALCHEMY_DATABASE_URI']
+        })
+    except Exception as e:
+        logger.error(f"Database initialization error: {str(e)}")
+        return jsonify({
+            "status": "error",
+            "error": str(e),
+            "database_url": app.config['SQLALCHEMY_DATABASE_URI']
+        }), 500
 
 if __name__ == "__main__":
     port = int(os.getenv("PORT", 8080))
