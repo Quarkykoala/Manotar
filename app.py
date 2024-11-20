@@ -115,7 +115,7 @@ twilio_whatsapp_number = os.getenv('TWILIO_WHATSAPP_NUMBER')
 client = Client(account_sid, auth_token)
 
 # Configure the Generative AI library with your API key
-genai.configure(api_key=os.getenv("GOOGLE_API_KEY"))
+genai.configure(api_key="AIzaSyAEpYZd_kksVLiXD_U4tmGqlNN-ZP3KfpI")
 
 # Initialize the Gemini model
 model = genai.GenerativeModel("gemini-1.5-flash-002")
@@ -174,8 +174,15 @@ def get_response(user_input, conversation_history):
         # Construct the conversation including the system prompt
         full_conversation = f"{system_prompt}\n\n{conversation_history}\nUser: {user_input}\nAthena:"
         
-        # Generate the response using the model
-        response = model.generate_content(full_conversation)
+        # Generate the response using the model with safety settings
+        response = model.generate_content(
+            full_conversation,
+            generation_config={
+                "temperature": 0.7,
+                "top_p": 0.8,
+                "max_output_tokens": 1024,
+            }
+        )
         
         # Extract and clean the assistant's response
         assistant_response = response.text.strip()
