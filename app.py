@@ -48,34 +48,32 @@ db_host = os.getenv("DB_HOST")
 db_port = os.getenv("DB_PORT")
 db_name = os.getenv("DB_NAME")
 
-# SSL configuration for MySQL
-ssl_args = {
-    'ssl': {
-        'rejectUnauthorized': True,
-    }
-}
-
 # Update the database URI configuration
 app.config['SQLALCHEMY_DATABASE_URI'] = (
     f'mysql+pymysql://{db_user}:{db_pass}@{db_host}:{db_port}/{db_name}'
 )
-app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
-    'connect_args': ssl_args
-}
-
-# Add debug logging
-logger.info(f"Database URI: {app.config['SQLALCHEMY_DATABASE_URI'].replace(db_pass, '****')}")
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 # Initialize database
-try:
-    db = SQLAlchemy(app)
-    migrate = Migrate(app, db)
-    # Test connection immediately
-    with db.engine.connect() as conn:
-        logger.info("Initial database connection successful")
-except Exception as e:
-    logger.error(f"Failed to initialize database: {str(e)}")
-    raise
+db = SQLAlchemy(app)
+migrate = Migrate(app, db)
+
+# Test database connection within app context
+with app.app_context():
+    try:
+        # Test connection
+        with db.engine.connect() as conn:
+            logger.info("Initial database connection successful")
+            # Test a simple query
+            result = conn.execute("SELECT 1")
+            logger.info("Test query successful")
+            
+        # Create all tables
+        db.create_all()
+        logger.info("Database tables created successfully")
+    except Exception as e:
+        logger.error(f"Failed to initialize database: {str(e)}")
+        raise
 
 # Define the User model
 class User(db.Model):
