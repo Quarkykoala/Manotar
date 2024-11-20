@@ -177,17 +177,18 @@ def get_response(user_input, conversation_history):
         # Generate the response using the model
         response = model.generate_content(full_conversation)
         
-        # Extract the assistant's response
+        # Extract and clean the assistant's response
         assistant_response = response.text.strip()
         
         # Ensure the response doesn't go beyond "User:"
         if "\nUser:" in assistant_response:
             assistant_response = assistant_response.split("\nUser:")[0]
         
+        logger.info(f"Generated response: {assistant_response}")
         return assistant_response
     except Exception as e:
-        logger.exception(f"Error generating AI response: {str(e)}")
-        return "I encountered an error while processing your request. Please try again later."
+        logger.error(f"Error generating AI response: {str(e)}")
+        return "I apologize, but I'm having trouble processing your request right now. Could you please try again?"
 
 def split_message(message, limit=1600):
     """Splits a message into chunks of specified character limit."""
