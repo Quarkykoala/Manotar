@@ -14,6 +14,7 @@ from google.api_core import exceptions as google_exceptions
 
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy import inspect
+from sqlalchemy import text
 
 import re
 from dotenv import load_dotenv
@@ -64,8 +65,8 @@ with app.app_context():
         # Test connection
         with db.engine.connect() as conn:
             logger.info("Initial database connection successful")
-            # Test a simple query
-            result = conn.execute("SELECT 1")
+            # Test a simple query using SQLAlchemy text
+            result = conn.execute(text("SELECT 1"))
             logger.info("Test query successful")
             
         # Create all tables
@@ -486,7 +487,7 @@ def init_db():
         with db.engine.connect() as conn:
             logger.info("Database connection successful")
             # Test a simple query
-            result = conn.execute("SELECT 1")
+            result = conn.execute(text("SELECT 1"))
             logger.info("Test query successful")
         
         # Create tables
