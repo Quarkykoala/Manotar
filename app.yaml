@@ -1,21 +1,39 @@
-runtime: python39
+name: mental-health-bot
+region: blr1
+services:
+  - name: web
+    github:
+      repo: yourusername/mental-health-bot
+      branch: main
+      deploy_on_push: true
+    build_command: pip install -r requirements.txt
+    run_command: gunicorn app:app
+    environment_slug: python
+    instance_size_slug: basic-xxs
+    instance_count: 1
+    envs:
+      - key: DB_USER
+        value: ${db.USERNAME}
+      - key: DB_PASS
+        value: ${db.PASSWORD}
+      - key: DB_NAME
+        value: clients
+      - key: DB_HOST
+        value: ${db.HOSTNAME}
+      - key: TWILIO_ACCOUNT_SID
+        value: AC48e52113db34586361c7651fb1cf43bd
+      - key: TWILIO_AUTH_TOKEN
+        type: secret
+        value: your-auth-token
+      - key: TWILIO_WHATSAPP_NUMBER
+        value: +14155238886
+      - key: GOOGLE_API_KEY
+        type: secret
+        value: your-google-api-key
+      - key: FLASK_DEBUG
+        value: "False"
 
-entrypoint: gunicorn -b :$PORT app:app
-
-env_variables:
-  DB_USER: 'root'
-  DB_PASS: 'Hesogamol_01'
-  DB_NAME: 'clients'
-  DB_CONNECTION_NAME: 'mental-health-bot-430515:asia-south1:manobal-01'
-  TWILIO_ACCOUNT_SID: 'AC48e52113db34586361c7651fb1cf43bd'
-  TWILIO_AUTH_TOKEN: 'a94c8baf82099ad9b86fbec0e31ea2d9'
-  TWILIO_WHATSAPP_NUMBER: '+14155238886'
-  GOOGLE_API_KEY: 'AIzaSyAEpYZd_kksVLiXD_U4tmGqlNN-ZP3KfpI'
-  FLASK_DEBUG: 'False'
-
-beta_settings:
-  cloud_sql_instances: mental-health-bot-430515:asia-south1:manobal-01
-
-handlers:
-  - url: /.*
-    script: auto
+databases:
+  - engine: MYSQL
+    name: db
+    version: "8"

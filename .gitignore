@@ -2,4 +2,6 @@ venv/
 __pycache__/
 *.pyc
 .env
-nltk_data/
+.DS_Store
+*.db
+mental-health-chatbot-430515-c8185389d49b.json

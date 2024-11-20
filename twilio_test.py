@@ -17,13 +17,25 @@ if not account_sid or not auth_token:
 client = Client(account_sid, auth_token)
 
 try:
+    # Verify if the credentials are loaded correctly
+    print(f"Using Twilio Account SID: {account_sid[:6]}...{account_sid[-4:]}")
+    
     message = client.messages.create(
         body='Hello from Twilio!',
         from_='whatsapp:+14155238886',  # Twilio Sandbox WhatsApp number
         to='whatsapp:+917710056323'     # Your WhatsApp number
     )
     print(f"Message sent successfully. SID: {message.sid}")
+    print("Message status:", message.status)
 except TwilioRestException as e:
-    print(f"An error occurred: {str(e)}")
+    print(f"Twilio Error: {str(e)}")
+    print(f"Error Code: {e.code}")
+    print(f"Error Message: {e.msg}")
+    if e.code == 21608:
+        print("Error: You need to join the WhatsApp sandbox first.")
+        print("Please send 'join <sandbox-code>' to +14155238886 on WhatsApp")
+    elif e.code == 21211:
+        print("Error: Invalid 'To' phone number. Make sure you've joined the sandbox with this number")
 except Exception as e:
     print(f"An unexpected error occurred: {str(e)}")
+    print(f"Error type: {type(e).__name__}")
