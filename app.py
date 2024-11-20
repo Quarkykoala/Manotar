@@ -33,11 +33,20 @@ app = Flask(__name__)
 load_dotenv()
 
 # Configure the database
-db_user = os.getenv("DB_USER", "doadmin")
-db_pass = os.getenv("DB_PASS", "AVNS_mWRasgqERtw0wOMvz8S")
-db_host = os.getenv("DB_HOST", "db-mysql-blr1-03087-do-user-18364467-0.h.db.ondigitalocean.com")
-db_port = os.getenv("DB_PORT", "25060")
-db_name = os.getenv("DB_NAME", "defaultdb")
+if not all([os.getenv("DB_USER"), os.getenv("DB_PASS"), os.getenv("DB_HOST"), 
+           os.getenv("DB_PORT"), os.getenv("DB_NAME")]):
+    logger.error("Missing database environment variables!")
+    logger.info(f"DB_USER: {os.getenv('DB_USER')}")
+    logger.info(f"DB_HOST: {os.getenv('DB_HOST')}")
+    logger.info(f"DB_PORT: {os.getenv('DB_PORT')}")
+    logger.info(f"DB_NAME: {os.getenv('DB_NAME')}")
+    raise ValueError("Database configuration incomplete")
+
+db_user = os.getenv("DB_USER")
+db_pass = os.getenv("DB_PASS")
+db_host = os.getenv("DB_HOST")
+db_port = os.getenv("DB_PORT")
+db_name = os.getenv("DB_NAME")
 
 # SSL configuration for MySQL
 ssl_args = {
@@ -46,7 +55,7 @@ ssl_args = {
     }
 }
 
-# Update the database URI configuration with SSL
+# Update the database URI configuration
 app.config['SQLALCHEMY_DATABASE_URI'] = (
     f'mysql+pymysql://{db_user}:{db_pass}@{db_host}:{db_port}/{db_name}'
 )
@@ -55,14 +64,18 @@ app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
 }
 
 # Add debug logging
-logger.info(f"Connecting to database at {db_host}:{db_port}")
-logger.info(f"Database Host: {db_host}")
-logger.info(f"Database Port: {db_port}")
-logger.info(f"Database Name: {db_name}")
+logger.info(f"Database URI: {app.config['SQLALCHEMY_DATABASE_URI'].replace(db_pass, '****')}")
 
 # Initialize database
-db = SQLAlchemy(app)
-migrate = Migrate(app, db)
+try:
+    db = SQLAlchemy(app)
+    migrate = Migrate(app, db)
+    # Test connection immediately
+    with db.engine.connect() as conn:
+        logger.info("Initial database connection successful")
+except Exception as e:
+    logger.error(f"Failed to initialize database: {str(e)}")
+    raise
 
 # Define the User model
 class User(db.Model):
@@ -250,12 +263,18 @@ def bot():
         # Fetch or create user
         user = User.query.filter_by(phone_number=from_number).first()
         if user is None:
-            # New user: generate access code and create user record
+            # Log new user creation
+            logger.info(f"Creating new user for {from_number}")
             access_code = generate_access_code()
-            user = User(phone_number=from_number, access_code=access_code, conversation_history="")
+            user = User(
+                phone_number=from_number, 
+                access_code=access_code,
+                conversation_history=""
+            )
             db.session.add(user)
             db.session.commit()
-            # Send access code to the user
+            logger.info(f"Created user with access code: {access_code}")
+            
             message = client.messages.create(
                 body=f"Welcome to Athena, your mental health support assistant.\n"
                      f"To begin, please enter your unique access code: {access_code}.\n"
@@ -264,14 +283,12 @@ def bot():
                 to=f'whatsapp:{from_number}'
             )
             return '', 200
-        else:
-            logger.info(f"Existing user {from_number} with access code {user.access_code}")
 
         # Handle 'RESEND' command
         if incoming_msg.upper() == 'RESEND':
-            existing_access_code = user.access_code
+            logger.info(f"Resending access code {user.access_code} to {from_number}")
             message = client.messages.create(
-                body=f"Your access code is: {existing_access_code}. Please enter this code to begin.",
+                body=f"Your access code is: {user.access_code}. Please enter this code to begin.",
                 from_=f'whatsapp:{twilio_whatsapp_number}',
                 to=f'whatsapp:{from_number}'
             )
@@ -279,7 +296,9 @@ def bot():
 
         # Authentication handling
         if not user.is_authenticated:
-            if incoming_msg.upper() == user.access_code:
+            logger.info(f"Checking access code: received '{incoming_msg}' vs stored '{user.access_code}'")
+            if incoming_msg.strip() == user.access_code.strip():
+                logger.info(f"Access code correct for {from_number}")
                 user.is_authenticated = True
                 user.authentication_time = datetime.utcnow()
                 db.session.commit()
@@ -290,6 +309,7 @@ def bot():
                 )
                 return '', 200
             else:
+                logger.info(f"Access code incorrect for {from_number}")
                 message = client.messages.create(
                     body="I'm sorry, but that's not the correct access code. Please check and try again, or type 'RESEND' if you need your code.",
                     from_=f'whatsapp:{twilio_whatsapp_number}',
@@ -419,12 +439,21 @@ def apply_migrations():
 
 @app.route('/check_table')
 def check_table():
-    inspector = inspect(db.engine)
-    tables = inspector.get_table_names()
-    if 'user' in tables:
-        return "User table exists!"
-    else:
-        return "User table does not exist."
+    try:
+        inspector = inspect(db.engine)
+        tables = inspector.get_table_names()
+        logger.info(f"Found tables: {tables}")
+        return jsonify({
+            "status": "success",
+            "tables": tables,
+            "user_table_exists": 'user' in tables
+        })
+    except Exception as e:
+        logger.error(f"Error checking tables: {str(e)}")
+        return jsonify({
+            "status": "error",
+            "error": str(e)
+        }), 500
 
 @app.route('/api/keyword-stats', methods=['GET'])
 def get_keyword_stats():
@@ -458,6 +487,9 @@ def init_db():
         # Test connection first
         with db.engine.connect() as conn:
             logger.info("Database connection successful")
+            # Test a simple query
+            result = conn.execute("SELECT 1")
+            logger.info("Test query successful")
         
         # Create tables
         db.create_all()
@@ -466,15 +498,31 @@ def init_db():
         return jsonify({
             "status": "success",
             "message": "Database initialized successfully",
-            "database_url": app.config['SQLALCHEMY_DATABASE_URI']
+            "database_url": app.config['SQLALCHEMY_DATABASE_URI'].replace(db_pass, '****')
         })
     except Exception as e:
-        logger.error(f"Database initialization error: {str(e)}")
+        error_msg = str(e)
+        logger.error(f"Database initialization error: {error_msg}")
         return jsonify({
             "status": "error",
-            "error": str(e),
-            "database_url": app.config['SQLALCHEMY_DATABASE_URI']
+            "error": error_msg,
+            "database_url": app.config['SQLALCHEMY_DATABASE_URI'].replace(db_pass, '****')
         }), 500
+
+@app.route('/check_user/<phone_number>')
+def check_user(phone_number):
+    try:
+        user = User.query.filter_by(phone_number=phone_number).first()
+        if user:
+            return jsonify({
+                "exists": True,
+                "access_code": user.access_code,
+                "is_authenticated": user.is_authenticated,
+                "phone_number": user.phone_number
+            })
+        return jsonify({"exists": False}), 404
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 if __name__ == "__main__":
     port = int(os.getenv("PORT", 8080))

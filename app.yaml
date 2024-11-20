@@ -13,12 +13,12 @@ services:
     instance_count: 1
     envs:
       - key: DB_USER
-        value: doadmin
+        value: ${db.USERNAME}
       - key: DB_PASS
         type: secret
-        value: AVNS_mWRasgqERtw0wOMvz8S
+        value: ${db.PASSWORD}
       - key: DB_HOST
-        value: db-mysql-blr1-03087-do-user-18364467-0.h.db.ondigitalocean.com
+        value: ${db.HOSTNAME}
       - key: DB_PORT
         value: "25060"
       - key: DB_NAME
