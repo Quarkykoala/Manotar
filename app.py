@@ -22,6 +22,14 @@ from dotenv import load_dotenv
 from nltk.tokenize import word_tokenize
 from nltk.corpus import stopwords
 import nltk
+nltk.data.path.append('/usr/local/share/nltk_data')
+
+try:
+    nltk.data.find('tokenizers/punkt')
+    nltk.data.find('corpora/stopwords')
+except LookupError:
+    nltk.download('punkt', quiet=True)
+    nltk.download('stopwords', quiet=True)
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)

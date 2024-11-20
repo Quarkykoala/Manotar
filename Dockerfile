@@ -16,11 +16,11 @@ COPY requirements.txt .
 # Install Python packages with verbose output for debugging
 RUN pip install --no-cache-dir -r requirements.txt --verbose
 
+# Create NLTK data directory and download required data
+RUN python -m nltk.downloader -d /usr/local/share/nltk_data punkt stopwords
+
 # Copy application code
 COPY . .
-
-# Download NLTK data with error handling
-RUN python -c "import nltk; nltk.download('punkt', quiet=False); nltk.download('stopwords', quiet=False)" || exit 1
 
 # Environment variables will be set through DigitalOcean's interface
 EXPOSE 8080
