@@ -1,0 +1,17 @@
+2024-10-29 17:32:30,895 - INFO - TestLogger - Setting up test class...
+2024-10-29 17:32:30,911 - DEBUG - TestLogger - Registering test routes...
+2024-10-29 17:32:31,020 - INFO - TestLogger - Test class setup completed successfully
+2024-10-29 17:32:31,020 - INFO - TestLogger - Setting up test: test_keyword_stats
+2024-10-29 17:32:31,114 - DEBUG - TestLogger - Created test user: testuser
+2024-10-29 17:32:31,114 - INFO - TestLogger - Running keyword stats test
+2024-10-29 17:32:31,114 - DEBUG - TestLogger - Keyword stats response status: 200
+2024-10-29 17:32:31,114 - INFO - TestLogger - Keyword stats test passed
+2024-10-29 17:32:31,114 - INFO - TestLogger - Tearing down test: test_keyword_stats
+2024-10-29 17:32:31,114 - DEBUG - TestLogger - Database cleaned up
+2024-10-29 17:32:31,114 - INFO - TestLogger - Setting up test: test_login
+2024-10-29 17:32:31,208 - DEBUG - TestLogger - Created test user: testuser
+2024-10-29 17:32:31,208 - INFO - TestLogger - Running login test
+2024-10-29 17:32:31,208 - DEBUG - TestLogger - Login response status: 302
+2024-10-29 17:32:31,208 - INFO - TestLogger - Login test passed
+2024-10-29 17:32:31,208 - INFO - TestLogger - Tearing down test: test_login
+2024-10-29 17:32:31,208 - DEBUG - TestLogger - Database cleaned up

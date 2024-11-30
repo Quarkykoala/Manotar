@@ -1,0 +1,236 @@
+Starting test run at Tue 10/29/2024 17:58:15.82 
+============================== 
+Running Backend Tests... 
+------------------------------ 
+
+----------------------------------------------------------------------
+Ran 0 tests in 0.000s
+
+OK
+ 
+Running Frontend Tests... 
+------------------------------ 
+Installing frontend dependencies... 
+npm WARN EBADENGINE Unsupported engine {
+npm WARN EBADENGINE   package: '@inquirer/core@10.0.1',
+npm WARN EBADENGINE   required: { node: '>=18' },
+npm WARN EBADENGINE   current: { node: 'v16.20.0', npm: '8.19.4' }
+npm WARN EBADENGINE }
+npm WARN EBADENGINE Unsupported engine {
+npm WARN EBADENGINE   package: '@inquirer/type@3.0.0',
+npm WARN EBADENGINE   required: { node: '>=18' },
+npm WARN EBADENGINE   current: { node: 'v16.20.0', npm: '8.19.4' }
+npm WARN EBADENGINE }
+npm WARN EBADENGINE Unsupported engine {
+npm WARN EBADENGINE   package: '@inquirer/figures@1.0.7',
+npm WARN EBADENGINE   required: { node: '>=18' },
+npm WARN EBADENGINE   current: { node: 'v16.20.0', npm: '8.19.4' }
+npm WARN EBADENGINE }
+npm WARN EBADENGINE Unsupported engine {
+npm WARN EBADENGINE   package: '@mswjs/interceptors@0.36.6',
+npm WARN EBADENGINE   required: { node: '>=18' },
+npm WARN EBADENGINE   current: { node: 'v16.20.0', npm: '8.19.4' }
+npm WARN EBADENGINE }
+npm WARN EBADENGINE Unsupported engine {
+npm WARN EBADENGINE   package: '@testing-library/dom@10.4.0',
+npm WARN EBADENGINE   required: { node: '>=18' },
+npm WARN EBADENGINE   current: { node: 'v16.20.0', npm: '8.19.4' }
+npm WARN EBADENGINE }
+npm WARN EBADENGINE Unsupported engine {
+npm WARN EBADENGINE   package: '@testing-library/react@16.0.1',
+npm WARN EBADENGINE   required: { node: '>=18' },
+npm WARN EBADENGINE   current: { node: 'v16.20.0', npm: '8.19.4' }
+npm WARN EBADENGINE }
+npm WARN EBADENGINE Unsupported engine {
+npm WARN EBADENGINE   package: 'msw@2.6.0',
+npm WARN EBADENGINE   required: { node: '>=18' },
+npm WARN EBADENGINE   current: { node: 'v16.20.0', npm: '8.19.4' }
+npm WARN EBADENGINE }
+npm WARN EBADENGINE Unsupported engine {
+npm WARN EBADENGINE   package: '@inquirer/confirm@5.0.1',
+npm WARN EBADENGINE   required: { node: '>=18' },
+npm WARN EBADENGINE   current: { node: 'v16.20.0', npm: '8.19.4' }
+npm WARN EBADENGINE }
+npm WARN EBADENGINE Unsupported engine {
+npm WARN EBADENGINE   package: '@inquirer/type@3.0.0',
+npm WARN EBADENGINE   required: { node: '>=18' },
+npm WARN EBADENGINE   current: { node: 'v16.20.0', npm: '8.19.4' }
+npm WARN EBADENGINE }
+npm WARN EBADENGINE Unsupported engine {
+npm WARN EBADENGINE   package: 'mute-stream@2.0.0',
+npm WARN EBADENGINE   required: { node: '^18.17.0 || >=20.5.0' },
+npm WARN EBADENGINE   current: { node: 'v16.20.0', npm: '8.19.4' }
+npm WARN EBADENGINE }
+npm WARN EBADENGINE Unsupported engine {
+npm WARN EBADENGINE   package: 'yoctocolors-cjs@2.1.2',
+npm WARN EBADENGINE   required: { node: '>=18' },
+npm WARN EBADENGINE   current: { node: 'v16.20.0', npm: '8.19.4' }
+npm WARN EBADENGINE }
+
+up to date, audited 1463 packages in 6s
+
+271 packages are looking for funding
+  run `npm fund` for details
+
+12 vulnerabilities (3 low, 2 moderate, 7 high)
+
+To address issues that do not require attention, run:
+  npm audit fix
+
+To address all issues (including breaking changes), run:
+  npm audit fix --force
+
+Run `npm audit` for details.
+Running tests... 
+
+> frontend@0.1.0 test
+> react-scripts test --watchAll=false --verbose
+
+FAIL src/App.test.tsx
+  ● Test suite failed to run
+
+    ReferenceError: C:\Users\hp\Desktop\Mental Health bot\frontend\src\setupTests.ts: The module factory of `jest.mock()` is not allowed to reference any out-of-scope variables.
+    Invalid variable access: document
+    Allowed objects: AbortController, AbortSignal, AggregateError, Array, ArrayBuffer, Atomics, BigInt, BigInt64Array, BigUint64Array, Boolean, Buffer, DataView, Date, Error, EvalError, Event, EventTarget, FinalizationRegistry, Float32Array, Float64Array, Function, Generator, GeneratorFunction, Infinity, Int16Array, Int32Array, Int8Array, InternalError, Intl, JSON, Map, Math, MessageChannel, MessageEvent, MessagePort, NaN, Number, Object, Promise, Proxy, RangeError, ReferenceError, Reflect, RegExp, Set, SharedArrayBuffer, String, Symbol, SyntaxError, TextDecoder, TextEncoder, TypeError, URIError, URL, URLSearchParams, Uint16Array, Uint32Array, Uint8Array, Uint8ClampedArray, WeakMap, WeakRef, WeakSet, WebAssembly, __dirname, __filename, arguments, atob, btoa, clearImmediate, clearInterval, clearTimeout, console, decodeURI, decodeURIComponent, encodeURI, encodeURIComponent, escape, eval, expect, exports, global, globalThis, isFinite, isNaN, jest, module, parseFloat, parseInt, performance, process, queueMicrotask, require, setImmediate, setInterval, setTimeout, undefined, unescape.
+    Note: This is a precaution to guard against uninitialized mock variables. If it is ensured that the mock is required lazily, variable names prefixed with `mock` (case insensitive) are permitted.
+
+    [0m [90m 41 |[39m   [36mconst[39m mockComponent [33m=[39m (name[33m:[39m string) [33m=>[39m {
+     [90m 42 |[39m     [36mconst[39m component [33m=[39m ({ children[33m,[39m [33m...[39mprops }[33m:[39m any) [33m=>[39m {
+    [31m[1m>[22m[39m[90m 43 |[39m       [36mconst[39m mockElement [33m=[39m document[33m.[39mcreateElement([32m'div'[39m)[33m;[39m
+     [90m    |[39m                           [31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m
+     [90m 44 |[39m       mockElement[33m.[39msetAttribute([32m'data-testid'[39m[33m,[39m name[33m.[39mtoLowerCase())[33m;[39m
+     [90m 45 |[39m       [33mObject[39m[33m.[39mkeys(props)[33m.[39mforEach(key [33m=>[39m {
+     [90m 46 |[39m         mockElement[33m.[39msetAttribute(key[33m,[39m props[key])[33m;[39m[0m
+
+      at File.buildError [as buildCodeFrameError] (node_modules/@babel/core/src/transformation/file/file.ts:247:12)
+      at NodePath.buildCodeFrameError (node_modules/@babel/traverse/src/path/index.ts:141:21)
+      at call (node_modules/@babel/traverse/src/visitors.ts:303:14)
+      at NodePath.call [as _call] (node_modules/@babel/traverse/src/path/context.ts:36:20)
+      at NodePath.call (node_modules/@babel/traverse/src/path/context.ts:21:18)
+      at NodePath.visit (node_modules/@babel/traverse/src/path/context.ts:97:31)
+      at TraversalContext.visitQueue (node_modules/@babel/traverse/src/context.ts:148:16)
+      at TraversalContext.visitMultiple (node_modules/@babel/traverse/src/context.ts:99:17)
+      at TraversalContext.visit (node_modules/@babel/traverse/src/context.ts:178:19)
+      at traverseNode (node_modules/@babel/traverse/src/traverse-node.ts:40:17)
+      at NodePath.visit (node_modules/@babel/traverse/src/path/context.ts:104:33)
+      at TraversalContext.visitQueue (node_modules/@babel/traverse/src/context.ts:148:16)
+      at TraversalContext.visitSingle (node_modules/@babel/traverse/src/context.ts:109:19)
+      at TraversalContext.visit (node_modules/@babel/traverse/src/context.ts:180:19)
+      at traverseNode (node_modules/@babel/traverse/src/traverse-node.ts:40:17)
+      at traverse (node_modules/@babel/traverse/src/index.ts:83:15)
+      at transformFile (node_modules/@babel/core/src/transformation/index.ts:119:15)
+          at transformFile.next (<anonymous>)
+      at run (node_modules/@babel/core/src/transformation/index.ts:49:12)
+          at run.next (<anonymous>)
+      at transform (node_modules/@babel/core/src/transform.ts:29:20)
+          at transform.next (<anonymous>)
+      at evaluateSync (node_modules/gensync/index.js:251:28)
+      at fn (node_modules/gensync/index.js:89:14)
+      at stopHiding - secret - don't use this - v1 (node_modules/@babel/core/src/errors/rewrite-stack-trace.ts:99:14)
+      at transformSync (node_modules/@babel/core/src/transform.ts:66:52)
+      at ScriptTransformer.transformSource (node_modules/@jest/transform/build/ScriptTransformer.js:619:31)
+      at ScriptTransformer._transformAndBuildScript (node_modules/@jest/transform/build/ScriptTransformer.js:765:40)
+      at ScriptTransformer.transform (node_modules/@jest/transform/build/ScriptTransformer.js:822:19)
+
+FAIL src/tests/App.test.tsx
+  ● Test suite failed to run
+
+    ReferenceError: C:\Users\hp\Desktop\Mental Health bot\frontend\src\setupTests.ts: The module factory of `jest.mock()` is not allowed to reference any out-of-scope variables.
+    Invalid variable access: document
+    Allowed objects: AbortController, AbortSignal, AggregateError, Array, ArrayBuffer, Atomics, BigInt, BigInt64Array, BigUint64Array, Boolean, Buffer, DataView, Date, Error, EvalError, Event, EventTarget, FinalizationRegistry, Float32Array, Float64Array, Function, Generator, GeneratorFunction, Infinity, Int16Array, Int32Array, Int8Array, InternalError, Intl, JSON, Map, Math, MessageChannel, MessageEvent, MessagePort, NaN, Number, Object, Promise, Proxy, RangeError, ReferenceError, Reflect, RegExp, Set, SharedArrayBuffer, String, Symbol, SyntaxError, TextDecoder, TextEncoder, TypeError, URIError, URL, URLSearchParams, Uint16Array, Uint32Array, Uint8Array, Uint8ClampedArray, WeakMap, WeakRef, WeakSet, WebAssembly, __dirname, __filename, arguments, atob, btoa, clearImmediate, clearInterval, clearTimeout, console, decodeURI, decodeURIComponent, encodeURI, encodeURIComponent, escape, eval, expect, exports, global, globalThis, isFinite, isNaN, jest, module, parseFloat, parseInt, performance, process, queueMicrotask, require, setImmediate, setInterval, setTimeout, undefined, unescape.
+    Note: This is a precaution to guard against uninitialized mock variables. If it is ensured that the mock is required lazily, variable names prefixed with `mock` (case insensitive) are permitted.
+
+    [0m [90m 41 |[39m   [36mconst[39m mockComponent [33m=[39m (name[33m:[39m string) [33m=>[39m {
+     [90m 42 |[39m     [36mconst[39m component [33m=[39m ({ children[33m,[39m [33m...[39mprops }[33m:[39m any) [33m=>[39m {
+    [31m[1m>[22m[39m[90m 43 |[39m       [36mconst[39m mockElement [33m=[39m document[33m.[39mcreateElement([32m'div'[39m)[33m;[39m
+     [90m    |[39m                           [31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m
+     [90m 44 |[39m       mockElement[33m.[39msetAttribute([32m'data-testid'[39m[33m,[39m name[33m.[39mtoLowerCase())[33m;[39m
+     [90m 45 |[39m       [33mObject[39m[33m.[39mkeys(props)[33m.[39mforEach(key [33m=>[39m {
+     [90m 46 |[39m         mockElement[33m.[39msetAttribute(key[33m,[39m props[key])[33m;[39m[0m
+
+      at File.buildError [as buildCodeFrameError] (node_modules/@babel/core/src/transformation/file/file.ts:247:12)
+      at NodePath.buildCodeFrameError (node_modules/@babel/traverse/src/path/index.ts:141:21)
+      at call (node_modules/@babel/traverse/src/visitors.ts:303:14)
+      at NodePath.call [as _call] (node_modules/@babel/traverse/src/path/context.ts:36:20)
+      at NodePath.call (node_modules/@babel/traverse/src/path/context.ts:21:18)
+      at NodePath.visit (node_modules/@babel/traverse/src/path/context.ts:97:31)
+      at TraversalContext.visitQueue (node_modules/@babel/traverse/src/context.ts:148:16)
+      at TraversalContext.visitMultiple (node_modules/@babel/traverse/src/context.ts:99:17)
+      at TraversalContext.visit (node_modules/@babel/traverse/src/context.ts:178:19)
+      at traverseNode (node_modules/@babel/traverse/src/traverse-node.ts:40:17)
+      at NodePath.visit (node_modules/@babel/traverse/src/path/context.ts:104:33)
+      at TraversalContext.visitQueue (node_modules/@babel/traverse/src/context.ts:148:16)
+      at TraversalContext.visitSingle (node_modules/@babel/traverse/src/context.ts:109:19)
+      at TraversalContext.visit (node_modules/@babel/traverse/src/context.ts:180:19)
+      at traverseNode (node_modules/@babel/traverse/src/traverse-node.ts:40:17)
+      at traverse (node_modules/@babel/traverse/src/index.ts:83:15)
+      at transformFile (node_modules/@babel/core/src/transformation/index.ts:119:15)
+          at transformFile.next (<anonymous>)
+      at run (node_modules/@babel/core/src/transformation/index.ts:49:12)
+          at run.next (<anonymous>)
+      at transform (node_modules/@babel/core/src/transform.ts:29:20)
+          at transform.next (<anonymous>)
+      at evaluateSync (node_modules/gensync/index.js:251:28)
+      at fn (node_modules/gensync/index.js:89:14)
+      at stopHiding - secret - don't use this - v1 (node_modules/@babel/core/src/errors/rewrite-stack-trace.ts:99:14)
+      at transformSync (node_modules/@babel/core/src/transform.ts:66:52)
+      at ScriptTransformer.transformSource (node_modules/@jest/transform/build/ScriptTransformer.js:619:31)
+      at ScriptTransformer._transformAndBuildScript (node_modules/@jest/transform/build/ScriptTransformer.js:765:40)
+      at ScriptTransformer.transform (node_modules/@jest/transform/build/ScriptTransformer.js:822:19)
+
+FAIL src/tests/Dashboard.test.tsx
+  ● Test suite failed to run
+
+    ReferenceError: C:\Users\hp\Desktop\Mental Health bot\frontend\src\setupTests.ts: The module factory of `jest.mock()` is not allowed to reference any out-of-scope variables.
+    Invalid variable access: document
+    Allowed objects: AbortController, AbortSignal, AggregateError, Array, ArrayBuffer, Atomics, BigInt, BigInt64Array, BigUint64Array, Boolean, Buffer, DataView, Date, Error, EvalError, Event, EventTarget, FinalizationRegistry, Float32Array, Float64Array, Function, Generator, GeneratorFunction, Infinity, Int16Array, Int32Array, Int8Array, InternalError, Intl, JSON, Map, Math, MessageChannel, MessageEvent, MessagePort, NaN, Number, Object, Promise, Proxy, RangeError, ReferenceError, Reflect, RegExp, Set, SharedArrayBuffer, String, Symbol, SyntaxError, TextDecoder, TextEncoder, TypeError, URIError, URL, URLSearchParams, Uint16Array, Uint32Array, Uint8Array, Uint8ClampedArray, WeakMap, WeakRef, WeakSet, WebAssembly, __dirname, __filename, arguments, atob, btoa, clearImmediate, clearInterval, clearTimeout, console, decodeURI, decodeURIComponent, encodeURI, encodeURIComponent, escape, eval, expect, exports, global, globalThis, isFinite, isNaN, jest, module, parseFloat, parseInt, performance, process, queueMicrotask, require, setImmediate, setInterval, setTimeout, undefined, unescape.
+    Note: This is a precaution to guard against uninitialized mock variables. If it is ensured that the mock is required lazily, variable names prefixed with `mock` (case insensitive) are permitted.
+
+    [0m [90m 41 |[39m   [36mconst[39m mockComponent [33m=[39m (name[33m:[39m string) [33m=>[39m {
+     [90m 42 |[39m     [36mconst[39m component [33m=[39m ({ children[33m,[39m [33m...[39mprops }[33m:[39m any) [33m=>[39m {
+    [31m[1m>[22m[39m[90m 43 |[39m       [36mconst[39m mockElement [33m=[39m document[33m.[39mcreateElement([32m'div'[39m)[33m;[39m
+     [90m    |[39m                           [31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m
+     [90m 44 |[39m       mockElement[33m.[39msetAttribute([32m'data-testid'[39m[33m,[39m name[33m.[39mtoLowerCase())[33m;[39m
+     [90m 45 |[39m       [33mObject[39m[33m.[39mkeys(props)[33m.[39mforEach(key [33m=>[39m {
+     [90m 46 |[39m         mockElement[33m.[39msetAttribute(key[33m,[39m props[key])[33m;[39m[0m
+
+      at File.buildError [as buildCodeFrameError] (node_modules/@babel/core/src/transformation/file/file.ts:247:12)
+      at NodePath.buildCodeFrameError (node_modules/@babel/traverse/src/path/index.ts:141:21)
+      at call (node_modules/@babel/traverse/src/visitors.ts:303:14)
+      at NodePath.call [as _call] (node_modules/@babel/traverse/src/path/context.ts:36:20)
+      at NodePath.call (node_modules/@babel/traverse/src/path/context.ts:21:18)
+      at NodePath.visit (node_modules/@babel/traverse/src/path/context.ts:97:31)
+      at TraversalContext.visitQueue (node_modules/@babel/traverse/src/context.ts:148:16)
+      at TraversalContext.visitMultiple (node_modules/@babel/traverse/src/context.ts:99:17)
+      at TraversalContext.visit (node_modules/@babel/traverse/src/context.ts:178:19)
+      at traverseNode (node_modules/@babel/traverse/src/traverse-node.ts:40:17)
+      at NodePath.visit (node_modules/@babel/traverse/src/path/context.ts:104:33)
+      at TraversalContext.visitQueue (node_modules/@babel/traverse/src/context.ts:148:16)
+      at TraversalContext.visitSingle (node_modules/@babel/traverse/src/context.ts:109:19)
+      at TraversalContext.visit (node_modules/@babel/traverse/src/context.ts:180:19)
+      at traverseNode (node_modules/@babel/traverse/src/traverse-node.ts:40:17)
+      at traverse (node_modules/@babel/traverse/src/index.ts:83:15)
+      at transformFile (node_modules/@babel/core/src/transformation/index.ts:119:15)
+          at transformFile.next (<anonymous>)
+      at run (node_modules/@babel/core/src/transformation/index.ts:49:12)
+          at run.next (<anonymous>)
+      at transform (node_modules/@babel/core/src/transform.ts:29:20)
+          at transform.next (<anonymous>)
+      at evaluateSync (node_modules/gensync/index.js:251:28)
+      at fn (node_modules/gensync/index.js:89:14)
+      at stopHiding - secret - don't use this - v1 (node_modules/@babel/core/src/errors/rewrite-stack-trace.ts:99:14)
+      at transformSync (node_modules/@babel/core/src/transform.ts:66:52)
+      at ScriptTransformer.transformSource (node_modules/@jest/transform/build/ScriptTransformer.js:619:31)
+      at ScriptTransformer._transformAndBuildScript (node_modules/@jest/transform/build/ScriptTransformer.js:765:40)
+      at ScriptTransformer.transform (node_modules/@jest/transform/build/ScriptTransformer.js:822:19)
+
+Test Suites: 3 failed, 3 total
+Tests:       0 total
+Snapshots:   0 total
+Time:        6.111 s
+Ran all test suites.
+Generating error report... 
+
+> frontend@0.1.0 generate-error-report
+> node scripts/generateErrorReport.js --output=frontend\logs\errors-20241029_175815.json
+

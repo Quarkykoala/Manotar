@@ -1,0 +1,58 @@
+Starting test run at Tue 10/29/2024 17:32:29.34 
+============================== 
+Initializing test database... 
+Test database initialized successfully
+INFO: Setting up test class...
+C:\Program Files\Python311\Lib\site-packages\flask\testing.py:118: DeprecationWarning: The '__version__' attribute is deprecated and will be removed in Werkzeug 3.1. Use feature detection or 'importlib.metadata.version("werkzeug")' instead.
+  "HTTP_USER_AGENT": f"werkzeug/{werkzeug.__version__}",
+INFO: Test class setup completed successfully
+test_keyword_stats (test_api.TestAPI.test_keyword_stats) ... INFO: Setting up test: test_keyword_stats
+INFO: Running keyword stats test
+INFO: Keyword stats test passed
+INFO: Tearing down test: test_keyword_stats
+ok
+test_login (test_api.TestAPI.test_login) ... INFO: Setting up test: test_login
+INFO: Running login test
+INFO: Login test passed
+INFO: Tearing down test: test_login
+ok
+
+----------------------------------------------------------------------
+Ran 2 tests in 0.312s
+
+OK
+Test database initialized successfully
+ 
+Running Frontend Tests... 
+------------------------------ 
+Installing frontend dependencies... 
+npm WARN EBADENGINE Unsupported engine {
+npm WARN EBADENGINE   package: '@testing-library/dom@10.4.0',
+npm WARN EBADENGINE   required: { node: '>=18' },
+npm WARN EBADENGINE   current: { node: 'v16.20.0', npm: '8.19.4' }
+npm WARN EBADENGINE }
+
+up to date, audited 1404 packages in 3s
+
+272 packages are looking for funding
+  run `npm fund` for details
+
+9 vulnerabilities (2 moderate, 7 high)
+
+To address issues that do not require attention, run:
+  npm audit fix
+
+To address all issues (including breaking changes), run:
+  npm audit fix --force
+
+Run `npm audit` for details.
+Running tests... 
+
+> frontend@0.1.0 test
+> react-scripts test --watchAll=false --verbose
+
+We detected setupFilesAfterEnv in your package.json.
+
+Remove it from Jest configuration, and put the initialization code in src/setupTests.js.
+This file will be loaded automatically.
+
