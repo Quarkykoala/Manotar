@@ -10,7 +10,7 @@ from flask_migrate import Migrate
 from flask_cors import CORS
 import google.generativeai as genai
 from google.api_core import exceptions as google_exceptions
-from sqlalchemy.exc import SQLAlchemy
+import sqlalchemy.exc
 from sqlalchemy import inspect, text
 import re
 from dotenv import load_dotenv
