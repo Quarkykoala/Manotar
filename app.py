@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 import os
 import secrets
 import string
@@ -590,3 +591,364 @@ def check_user(phone_number):
 if __name__ == "__main__":
     port = int(os.getenv("PORT", 8080))
     app.run(host='0.0.0.0', port=port)
+=======
+import os
+import secrets
+import string
+import logging
+from datetime import datetime, timedelta
+from flask import Flask, request, jsonify, render_template
+from twilio.rest import Client
+from flask_sqlalchemy import SQLAlchemy
+from flask_migrate import Migrate
+from flask_cors import CORS
+import google.generativeai as genai
+from google.api_core import exceptions as google_exceptions
+from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy import inspect
+import re
+from dotenv import load_dotenv
+from nltk.tokenize import word_tokenize
+from nltk.corpus import stopwords
+import nltk
+import random
+
+# Initialize Flask app
+app = Flask(__name__)
+CORS(app)
+
+# Load environment variables
+load_dotenv()
+
+# Configure the database
+db_user = os.getenv("DB_USER")
+db_pass = os.getenv("DB_PASS")
+db_name = os.getenv("DB_NAME")
+db_host = os.getenv("DB_HOST")
+db_connection_name = os.getenv("DB_CONNECTION_NAME")
+
+# Determine the environment based on the operating system
+if os.getenv('GAE_ENV', '').startswith('standard'):
+    # Running on Google App Engine, use Unix socket
+    app.config['SQLALCHEMY_DATABASE_URI'] = (
+        f'mysql+pymysql://{db_user}:{db_pass}@/{db_name}'
+        f'?unix_socket=/cloudsql/{db_connection_name}'
+    )
+    logger = logging.getLogger(__name__)
+    logging.basicConfig(level=logging.INFO)
+    logger.info("Operating System: Unix-like")
+    logger.info(f"SQLALCHEMY_DATABASE_URI: {app.config['SQLALCHEMY_DATABASE_URI']}")
+else:
+    # Running locally or in a different environment, use TCP connection
+    app.config['SQLALCHEMY_DATABASE_URI'] = (
+        f'mysql+pymysql://{db_user}:{db_pass}@{db_host}/{db_name}'
+    )
+    logger = logging.getLogger(__name__)
+    logging.basicConfig(level=logging.INFO)
+    logger.info("Operating System: Windows")
+    logger.info(f"SQLALCHEMY_DATABASE_URI: {app.config['SQLALCHEMY_DATABASE_URI']}")
+
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+
+# Initialize database
+db = SQLAlchemy(app)
+migrate = Migrate(app, db)
+
+# Define the User model
+class User(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    phone_number = db.Column(db.String(15), unique=True, nullable=False)
+    access_code = db.Column(db.String(8), nullable=False)
+    is_authenticated = db.Column(db.Boolean, default=False)
+    conversation_started = db.Column(db.Boolean, default=False)
+    last_message_time = db.Column(db.DateTime, nullable=True)
+    message_count = db.Column(db.Integer, default=0)
+    conversation_history = db.Column(db.Text, nullable=True)
+    authentication_time = db.Column(db.DateTime, nullable=True)
+    consent_given = db.Column(db.Boolean, default=False)
+    location = db.Column(db.String(100), nullable=True)
+    department = db.Column(db.String(100), nullable=True)
+
+    def __repr__(self):
+        return f'<User {self.phone_number}>'
+
+# Define the KeywordStat model
+class KeywordStat(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    department = db.Column(db.String(100), nullable=False)
+    location = db.Column(db.String(100), nullable=False)
+    keyword = db.Column(db.String(100), nullable=False)
+    count = db.Column(db.Integer, default=0)
+    timestamp = db.Column(db.DateTime, default=datetime.utcnow)
+
+    def __repr__(self):
+        return f'<KeywordStat {self.keyword} for User {self.user_id}>'
+
+# Twilio configuration
+account_sid = os.getenv('TWILIO_ACCOUNT_SID')
+auth_token = os.getenv('TWILIO_AUTH_TOKEN')
+twilio_whatsapp_number = os.getenv('TWILIO_WHATSAPP_NUMBER')
+
+client = Client(account_sid, auth_token)
+
+# Configure the Generative AI library with your API key
+genai.configure(api_key=os.getenv("GOOGLE_API_KEY"))
+
+# Initialize the Gemini model
+model = genai.GenerativeModel("gemini-1.5-pro")
+
+# Define helper functions
+def generate_access_code(length=8):
+    """Generates a secure random 8-character access code."""
+    # Ensure at least one letter and one number
+    letters = string.ascii_letters
+    digits = string.digits
+    
+    # Start with one letter and one number
+    code = [
+        secrets.choice(letters),
+        secrets.choice(digits)
+    ]
+    
+    # Fill the rest with random characters
+    remaining_length = length - len(code)
+    characters = letters + digits
+    code.extend(secrets.choice(characters) for _ in range(remaining_length))
+    
+    # Shuffle the code
+    code_list = list(code)
+    secrets.SystemRandom().shuffle(code_list)
+    
+    return ''.join(code_list)
+
+def generate_trend():
+    return f"{random.choice(['+', '-'])}{random.randint(1, 20)}%"
+
+def generate_risk_level():
+    return random.choice(["Low", "Medium", "High"])
+
+def generate_mental_health_score():
+    return round(random.uniform(5.0, 9.0), 1)
+
+# Define system prompt
+system_prompt = """
+You are Athena, an empathetic and expert mental health support assistant. 
+Provide warm, engaging responses that integrate techniques from various psychological therapies. 
+Offer tailored, actionable advice and maintain a natural conversational flow.
+ Use metaphors and analogies to simplify complex concepts.
+   Be prepared to manage crisis situations and adapt to diverse cultural backgrounds. 
+   Promote resilience building and self-care. 
+   Use gentle humor when appropriate and convey warmth through text.
+     Be comfortable with ambiguity and employ reflective listening.
+       Recommend professional help when necessary. 
+       If a user suggests they are suicidal, provide the suicide prevention number +91-9820466726.
+       You are trained in Cognitive Behavioral Therapy (CBT), Dialectical Behavior Therapy (DBT),Acceptance and Commitment Therapy (ACT), Rational Emotive Behavior Therapy (REBT), and Solution-Focused Brief Therapy (SFBT).
+"""
+
+# Add new analytics endpoints
+@app.route('/api/dashboard', methods=['GET'])
+def get_dashboard_data():
+    departments = ["Engineering", "Sales", "Marketing", "HR", "Finance", "Operations", "IT"]
+    keywords = ["overworked", "stress", "burnout", "anxiety", "deadline", "pressure", "workload"]
+    
+    data = {
+        "total_employees": random.randint(2500, 3500),
+        "at_risk_departments": random.randint(1, 4),
+        "mental_health_score": generate_mental_health_score(),
+        "keyword_occurrences": {
+            keyword: {
+                "count": random.randint(20, 50),
+                "trend": generate_trend()
+            } for keyword in keywords
+        },
+        "departments": [
+            {
+                "name": dept,
+                "count": random.randint(20, 120),
+                "risk_level": generate_risk_level()
+            } for dept in departments
+        ]
+    }
+    
+    return jsonify(data)
+
+@app.route('/api/department-comparison', methods=['GET'])
+def get_department_comparison():
+    departments = ["Engineering", "Sales", "Marketing", "HR", "Finance", "Operations", "IT"]
+    
+    comparison_data = [
+        {
+            "department": dept,
+            "mental_health_score": generate_mental_health_score(),
+            "support_requests": random.randint(20, 50),
+            "risk_level": generate_risk_level(),
+            "trend": generate_trend()
+        } for dept in departments
+    ]
+    
+    return jsonify(comparison_data)
+
+@app.route('/api/time-series', methods=['GET'])
+def get_time_series_data():
+    end_date = datetime.now()
+    start_date = end_date - timedelta(days=365)
+    
+    data = []
+    current_date = start_date
+    
+    while current_date <= end_date:
+        data.append({
+            "date": current_date.strftime("%Y-%m-%d"),
+            "mental_health_score": generate_mental_health_score(),
+            "support_requests": random.randint(10, 100)
+        })
+        current_date += timedelta(days=30)
+    
+    return jsonify(data)
+
+@app.route('/api/department/<department>/details', methods=['GET'])
+def get_department_details(department):
+    data = {
+        "department": department,
+        "total_employees": random.randint(50, 200),
+        "mental_health_score": generate_mental_health_score(),
+        "risk_level": generate_risk_level(),
+        "support_requests": random.randint(10, 50),
+        "trend": generate_trend(),
+        "key_metrics": {
+            "work_life_balance": generate_mental_health_score(),
+            "job_satisfaction": generate_mental_health_score(),
+            "stress_level": generate_mental_health_score(),
+            "team_morale": generate_mental_health_score()
+        },
+        "recent_keywords": [
+            {"word": "stress", "count": random.randint(5, 20)},
+            {"word": "workload", "count": random.randint(5, 20)},
+            {"word": "deadline", "count": random.randint(5, 20)},
+            {"word": "pressure", "count": random.randint(5, 20)}
+        ]
+    }
+    
+    return jsonify(data)
+
+# Add these helper functions
+def is_over_message_limit(user):
+    """Check if the user has exceeded their daily message limit."""
+    try:
+        now = datetime.utcnow()
+        if user.last_message_time is None or (now - user.last_message_time) >= timedelta(days=1):
+            user.message_count = 0
+            user.last_message_time = now
+            db.session.commit()
+            return False
+        else:
+            return user.message_count >= 50
+    except Exception as e:
+        logger.exception(f"Error checking message limit for user {user.phone_number}: {e}")
+        return False
+
+def update_message_count(user):
+    """Updates the message count and last message time for the user."""
+    user.message_count += 1
+    user.last_message_time = datetime.utcnow()
+    db.session.commit()
+
+def get_response(user_input, conversation_history):
+    """Generates a response from the AI model."""
+    try:
+        full_conversation = f"{system_prompt}\n\n{conversation_history}\nUser: {user_input}\nAthena:"
+        response = model.generate_content(full_conversation)
+        assistant_response = response.text.strip()
+        if "\nUser:" in assistant_response:
+            assistant_response = assistant_response.split("\nUser:")[0]
+        return assistant_response
+    except Exception as e:
+        logger.exception(f"Error generating AI response: {str(e)}")
+        return "I encountered an error while processing your request. Please try again later."
+
+# Add the bot route
+@app.route("/bot", methods=['POST'])
+def bot():
+    try:
+        incoming_msg = request.values.get('Body', '').strip()
+        from_number = request.values.get('From', '').strip()
+
+        if from_number.startswith('whatsapp:'):
+            from_number = from_number[len('whatsapp:'):]
+
+        if not from_number:
+            return "Invalid request", 400
+
+        user = User.query.filter_by(phone_number=from_number).first()
+        if user is None:
+            access_code = generate_access_code()
+            user = User(phone_number=from_number, access_code=access_code)
+            db.session.add(user)
+            db.session.commit()
+            return '', 200
+
+        if incoming_msg.upper() == 'RESEND':
+            return '', 200
+
+        if not user.is_authenticated:
+            if incoming_msg.upper() == user.access_code:
+                user.is_authenticated = True
+                user.authentication_time = datetime.utcnow()
+                db.session.commit()
+                return '', 200
+            return '', 200
+
+        if not user.consent_given:
+            if incoming_msg.lower() in ['yes', 'i agree']:
+                user.consent_given = True
+                db.session.commit()
+                return '', 200
+            return '', 200
+
+        if not user.location:
+            user.location = incoming_msg
+            db.session.commit()
+            return '', 200
+
+        if not user.department:
+            user.department = incoming_msg
+            db.session.commit()
+            return '', 200
+
+        if is_over_message_limit(user):
+            return '', 200
+
+        update_message_count(user)
+        return '', 200
+
+    except Exception as e:
+        logger.exception(f"Unhandled exception in bot route: {str(e)}")
+        return "An internal error occurred", 500
+
+# Add the keyword stats route
+@app.route('/api/keyword-stats', methods=['GET'])
+def get_keyword_stats():
+    department = request.args.get('department')
+    location = request.args.get('location')
+
+    query = db.session.query(
+        KeywordStat.keyword,
+        db.func.sum(KeywordStat.count).label('total_count')
+    )
+
+    if department:
+        query = query.filter(KeywordStat.department == department)
+    if location:
+        query = query.filter(KeywordStat.location == location)
+
+    query = query.group_by(KeywordStat.keyword)
+    stats = query.all()
+
+    data = [{'keyword': stat.keyword, 'total_count': stat.total_count} for stat in stats]
+    return jsonify(data)
+
+if __name__ == "__main__":
+    port = int(os.getenv("PORT", 8080))
+    app.run(host='0.0.0.0', port=port)
+>>>>>>> 684b464c7 (Initial commit)

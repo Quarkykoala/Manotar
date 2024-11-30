@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 venv/
 __pycache__/
 *.pyc
@@ -5,3 +6,16 @@ __pycache__/
 .DS_Store
 *.db
 mental-health-chatbot-430515-c8185389d49b.json
+=======
+venv/
+__pycache__/
+*.pyc
+.env
+nltk_data/
+instance/
+.vscode/
+*.log
+
+
+*storybook.log
+>>>>>>> 684b464c7 (Initial commit)

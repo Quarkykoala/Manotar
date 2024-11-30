@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 name: mental-health-bot
 region: blr1
 services:
@@ -41,3 +42,31 @@ databases:
     name: db-mysql-blr1-03087
     version: "8"
     production: false
+=======
+runtime: python39
+
+entrypoint: gunicorn -b :$PORT app:app
+
+env_variables:
+  FLASK_ENV: "production"
+
+handlers:
+  - url: /.*
+    script: auto
+    secure: always
+
+instance_class: F1
+
+automatic_scaling:
+  target_cpu_utilization: 0.65
+  min_instances: 1
+  max_instances: 10
+  min_pending_latency: 30ms
+  max_pending_latency: automatic
+  max_concurrent_requests: 50
+
+inbound_services:
+  - warmup
+
+env: standard
+>>>>>>> 684b464c7 (Initial commit)

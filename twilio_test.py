@@ -17,15 +17,19 @@ if not account_sid or not auth_token:
 client = Client(account_sid, auth_token)
 
 try:
+<<<<<<< HEAD
     # Verify if the credentials are loaded correctly
     print(f"Using Twilio Account SID: {account_sid[:6]}...{account_sid[-4:]}")
     
+=======
+>>>>>>> 684b464c7 (Initial commit)
     message = client.messages.create(
         body='Hello from Twilio!',
         from_='whatsapp:+14155238886',  # Twilio Sandbox WhatsApp number
         to='whatsapp:+917710056323'     # Your WhatsApp number
     )
     print(f"Message sent successfully. SID: {message.sid}")
+<<<<<<< HEAD
     print("Message status:", message.status)
 except TwilioRestException as e:
     print(f"Twilio Error: {str(e)}")
@@ -39,3 +43,9 @@ except TwilioRestException as e:
 except Exception as e:
     print(f"An unexpected error occurred: {str(e)}")
     print(f"Error type: {type(e).__name__}")
+=======
+except TwilioRestException as e:
+    print(f"An error occurred: {str(e)}")
+except Exception as e:
+    print(f"An unexpected error occurred: {str(e)}")
+>>>>>>> 684b464c7 (Initial commit)
