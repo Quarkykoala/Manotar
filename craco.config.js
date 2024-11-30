@@ -1,5 +1,4 @@
 const CracoLessPlugin = require('craco-less');
-const path = require('path');
 
 module.exports = {
   plugins: [
@@ -14,12 +13,11 @@ module.exports = {
       },
     },
   ],
-  webpack: {
-    alias: {
-      '@app': path.resolve(__dirname, 'src/'),
-      '@assets': path.resolve(__dirname, 'src/assets/'),
-      '@components': path.resolve(__dirname, 'src/components/'),
-      'ui-component': path.resolve(__dirname, 'src/ui-component/'),
-    },
+  babel: {
+    plugins: [
+      ['@babel/plugin-proposal-class-properties', { loose: true }],
+      ['@babel/plugin-proposal-private-methods', { loose: true }],
+      ['@babel/plugin-proposal-private-property-in-object', { loose: true }]
+    ],
   },
 };
