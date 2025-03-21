@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HR Mental Health Analytics</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Custom CSS -->
+    <style>
+        .metric-card {
+            @apply p-6 bg-white rounded-lg shadow-md;
+        }
+        .metric-value {
+            @apply text-3xl font-bold text-blue-600;
+        }
+        .metric-label {
+            @apply text-gray-600 text-sm;
+        }
+    </style>
+</head>
+<body class="bg-gray-100">
+    <!-- Navigation -->
+    <nav class="bg-blue-600 text-white p-4">
+        <div class="container mx-auto flex justify-between items-center">
+            <h1 class="text-2xl font-bold">HR Mental Health Dashboard</h1>
+            <div class="flex items-center space-x-4">
+                <span>Welcome, {{ current_user.username }}</span>
+                <a href="{{ url_for('hr_logout') }}" class="bg-blue-700 px-4 py-2 rounded hover:bg-blue-800">Logout</a>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <div class="container mx-auto px-4 py-8">
+        <!-- Metrics Overview -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+            <div class="metric-card">
+                <div class="metric-value" id="totalEmployees">--</div>
+                <div class="metric-label">Total Employees</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-value" id="activeUsers">--</div>
+                <div class="metric-label">Active Users (Last 7 Days)</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-value" id="riskScore">--</div>
+                <div class="metric-label">Overall Risk Score</div>
+            </div>
+        </div>
+
+        <!-- Charts Section -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+            <!-- Keyword Trends -->
+            <div class="bg-white p-6 rounded-lg shadow-md">
+                <h2 class="text-xl font-bold mb-4">Keyword Trends by Department</h2>
+                <canvas id="keywordChart"></canvas>
+            </div>
+            <!-- Department Analysis -->
+            <div class="bg-white p-6 rounded-lg shadow-md">
+                <h2 class="text-xl font-bold mb-4">Department Stress Levels</h2>
+                <canvas id="departmentChart"></canvas>
+            </div>
+        </div>
+
+        <!-- Detailed Analysis -->
+        <div class="bg-white p-6 rounded-lg shadow-md">
+            <h2 class="text-xl font-bold mb-4">Risk Indicators</h2>
+            <div class="overflow-x-auto">
+                <table class="min-w-full table-auto">
+                    <thead>
+                        <tr class="bg-gray-100">
+                            <th class="px-4 py-2">Department</th>
+                            <th class="px-4 py-2">Risk Level</th>
+                            <th class="px-4 py-2">Top Keywords</th>
+                            <th class="px-4 py-2">Recommended Action</th>
+                        </tr>
+                    </thead>
+                    <tbody id="riskTable">
+                        <!-- Dynamic content will be inserted here -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Charts Initialization -->
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Initialize keyword chart
+            const keywordCtx = document.getElementById('keywordChart').getContext('2d');
+            const keywordData = {{ keyword_counts | tojson | safe }};
+            
+            new Chart(keywordCtx, {
+                type: 'bar',
+                data: {
+                    labels: Object.keys(keywordData).map(k => k.split(',')[1]),
+                    datasets: [{
+                        label: 'Frequency',
+                        data: Object.values(keywordData),
+                        backgroundColor: 'rgba(59, 130, 246, 0.5)',
+                        borderColor: 'rgb(59, 130, 246)',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    scales: {
+                        y: {
+                            beginAtZero: true
+                        }
+                    }
+                }
+            });
+
+            // Department chart will be initialized with backend data
+            // Additional charts and data visualization will be added here
+        });
+    </script>
+</body>
+</html>
