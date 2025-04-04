@@ -140,21 +140,40 @@ For detailed information about available scripts, refer to the [scripts README](
 
 ### Running Tests
 
+The project uses a unified test structure organized by domain:
+
+```
+tests/
+├── backend/     # Backend API, models, services tests
+├── frontend/    # Frontend component, page, hook tests
+├── integration/ # Tests that span frontend-backend boundary
+└── fixtures/    # Test data and fixtures shared across tests
+```
+
+To run all tests:
+
 ```bash
-# Backend tests
-cd backend
-python -m pytest tests/
+# Run all tests from the project root
+pytest
 
 # Or use the test script
 scripts/test/run_tests.bat
-
-# Frontend tests
-cd frontend
-npm test
-
-# Or use the test script
-scripts/frontend/test_frontend.bat
 ```
+
+To run specific test categories:
+
+```bash
+# Backend tests only
+pytest tests/backend
+
+# Frontend tests only
+pytest tests/frontend
+
+# Integration tests only
+pytest tests/integration
+```
+
+For more details, see the [testing documentation](tests/README.md).
 
 ### Database Migrations
 
@@ -190,6 +209,46 @@ This application handles sensitive mental health data and complies with GDPR req
 - Data retention period is limited to 24 months
 - Secure authentication and role-based access control
 - All API endpoints are protected with appropriate authorization checks 
+
+### Environment Variables
+
+The project uses a standardized approach to environment variables:
+
+```
+project/
+├── .env.example     # Template with placeholders (committed)
+├── .env             # Local development values (not committed)
+├── .env.test        # Test environment values (not committed)
+├── .env.production  # Production values (not committed)
+├── backend/
+│   ├── .env.example # Backend-specific template
+│   └── .env         # Backend-specific values
+└── frontend/
+    ├── .env.example # Frontend-specific template
+    └── .env         # Frontend-specific values
+```
+
+To set up environment variables for a new environment:
+
+```bash
+# For Windows (PowerShell)
+./scripts/setup/setup_env.ps1 [environment]
+
+# For Linux/macOS
+./scripts/setup/setup_env.sh [environment]
+```
+
+To verify environment file configuration:
+
+```bash
+# For Windows (PowerShell)
+./scripts/deploy/env_cleanup.ps1
+
+# For Linux/macOS
+./scripts/deploy/env_cleanup.sh
+```
+
+For detailed information, see the [Environment Variable Strategy](docs/setup/environment.md).
 
 ### Handling Sensitive Files
 

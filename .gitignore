@@ -172,3 +172,15 @@ mental-health-chatbot-*.json
 *key*.json
 *secret*.json
 *service-account*.json
+
+# Environment files - standardized approach
+.env
+.env.*
+.env.test
+.env.production
+!.env.example
+*/.env
+*/.env.*
+*/.env.test
+*/.env.production
+!*/.env.example
