@@ -92,3 +92,72 @@ build/
 # MongoDB binaries
 .cache/mongodb-binaries/
 **/mongodb-memory-server/
+
+# Python virtual environments
+venv/
+.env
+.env.*
+!.env.example
+
+# Python bytecode
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# Node modules
+node_modules/
+.next/
+.swc/
+.turbo/
+out/
+dist/
+build/
+
+# Coverage
+.coverage
+htmlcov/
+coverage/
+
+# NLTK data
+nltk_data/
+
+# Database
+instance/
+*.db
+*.sqlite
+*.sqlite3
+
+# Testing
+.pytest_cache/
+.benchmarks/
+
+# Backup files
+*~
+*.bak
+*.swp
+*._*
+_BACKUP_*
+_BASE_*
+_LOCAL_*
+_REMOTE_*
+
+# IDE configurations
+.vscode/
+.idea/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Build artifacts
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# External secrets
+*.pem
+*.key
+*.cert

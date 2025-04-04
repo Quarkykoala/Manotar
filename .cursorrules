@@ -1,0 +1,196 @@
+description: |
+  Manotar Development Rules (.cursorrules)
+  Enhanced debugging strategy included: reflective root-cause logging before fixes.
+  Comprehensive CI/CD integration, accessibility standards, data privacy, explicit documentation, internationalization, API versioning, and test coverage metrics added.
+  PROJECT: AI-powered Mental Health Platform (Monorepo)
+  PURPOSE: Clarity, safety, scalability, compliance, and team-AI collaboration across Flask + Next.js monorepo.
+
+========================
+PRINCIPLES (Φ)
+========================
+∀ function f ∈ codebase: simplicity(f) > cleverness(f)
+∀ code edit e: scope(e) ≈ task(e)
+∄ unrelated_edit(e) ⇒ reject(e)
+
+quality(code) ∝ readability + test_coverage + auditability + maintainability
+
+========================
+PROJECT STRUCTURE (Σ)
+========================
+Σ := monorepo(backend/, frontend/, shared/, migrations/, scripts/, tests/, docs/)
+
+backend/: Flask API endpoints, models, services, sentiment analysis, Twilio webhook
+frontend/: Next.js app (TypeScript + TailwindCSS)
+shared/: utils, types, constants (shared between front & back)
+migrations/: Alembic DB migration scripts
+scripts/: utility scripts (e.g., create_hr_user.py)
+tests/: Pytest files with fixtures and isolated unit + integration tests
+docs/: architecture, technical specifications, setup guides
+
+✅ Consolidate: src/app/ ∪ frontend/ ∪ manotar-clean/ ∪ manotar-frontend → unified frontend/
+
+========================
+API VERSIONING (ν)
+========================
+∀ API_endpoint:
+  version(endpoint) ⇒ explicit prefix: "/api/vX/"
+  ∄ breaking_change(endpoint ∈ v_current) ⇒ new_version(endpoint)
+  explicitly document all API versions in docs/
+
+========================
+AI COLLABORATION (Ψ)
+========================
+∀ AI_task t:
+  define(t.goal) ∧ define(t.scope) ∧ define(t.constraints)
+  context(t) := memory ⊕ user_prompt ⊕ file_refs
+  stepwise_confirmation(t) ⇒ required
+
+trust(AI_output) ⇔ human_review_passed(AI_output)
+
+prefix("Suggestion:") ⇒ AI propose only  
+prefix("Applying fix:") ⇒ AI apply with high confidence
+
+========================
+TYPES & INTERFACES (τ)
+========================
+backend:
+  τ(Employee), τ(SentimentLog), τ(Interaction), τ(AuthUser)
+frontend:
+  τ(User), τ/SentimentSnapshot, τ/Filter, τ/ResponsePayload
+shared/types/ := canonical source of truth for cross-stack types
+
+document all public interfaces with docstrings ∨ JSDoc
+
+========================
+PERFORMANCE & UX (π)
+========================
+frontend:
+  load_time ≤ 2s
+  debounce_inputs(300ms)
+  handle_states ∈ { loading, error, empty }
+  realtime_UI_feedback := mandatory
+  use React.memo + lazy-loading for heavy charts & dashboards
+
+backend:
+  cache_frequently_requested_aggregates ∨ paginate_large_responses
+  async_sentiment_analysis() if needed to prevent webhook timeout
+
+========================
+SECURITY & PRIVACY (σ)
+========================
+∄ credentials ∈ committed_code
+.env ⊇ all variables
+.gitignore ⊇ .env, .env.*, node_modules, nltk_data, __pycache__
+
+validate(user_input) ∧ sanitize(text ∈ whatsapp ∪ dashboard)
+authentication := JWT + role-based access (HR vs Admin vs Bot)
+auth routes explicitly locked per endpoint
+GDPR compliance explicitly maintained:
+  - data anonymization
+  - user data deletion requests (≤ 30 days)
+  - user data export capability
+  - data retention ≤ 24 months unless explicit consent
+
+========================
+TESTING (T ⊆ Σ)
+========================
+∀ feature φ:
+  TDD(φ) := { write_failing_test(φ), implement(φ), pass(φ) }
+
+test_pass_all() ⇒ allow_merge()
+mock_data(dev/prod) := false
+pytest coverage ≥ 80% (backend)
+frontend test coverage ≥ 70% explicitly enforced
+manual QA + automated Playwright (frontend)
+
+========================
+DEPLOYMENT & CI/CD (Λ)
+========================
+Λ ∈ { Docker, GCP, Heroku }
+Dockerfile := builds Flask API
+app.yaml ∨ Procfile := correct for host
+CI/CD := automated tests, linting, builds run explicitly before PR merges
+
+README.md ⊇ setup, run, migrate, test, deploy steps
+docs/ explicitly reviewed & updated quarterly
+✅ Consolidate environment strategy: use .env.stage files ∨ .env.local
+
+========================
+ERROR HANDLING & DEBUGGING (δ)
+========================
+reflect_sources(problem) := identify(5-7 sources), distill(1-2 most_likely_sources), add_logs(validate_assumptions) ⇒ before_code_fix()
+frontend:
+  use ErrorBoundary.tsx
+  notifyUser(error_message)
+
+backend:
+  wrap_all_routes_in try/except
+  log(error ∈ Sentry ∨ rotating file logger)
+  respond(error) ⇒ structured JSON error format
+
+========================
+LOGGING & AUDIT TRAILS (λ)
+========================
+audit_log(event) := { user_id, timestamp, action, target }
+∀ access/modification to employee/sentiment data ⇒ audit_log()
+log_level := info ∪ error ∪ warning ∪ critical (structured logs preferred)
+
+========================
+ACCESSIBILITY (α)
+========================
+frontend:
+  WCAG 2.1 AA compliance explicitly maintained
+  semantic_HTML := mandatory
+  ARIA roles := explicit
+  keyboard_navigation := supported explicitly
+
+========================
+INTERNATIONALIZATION (ι)
+========================
+frontend UI ⇒ use i18n library explicitly (next-i18next)
+backend responses ⇒ structured for easy localization
+no user-visible text hardcoded explicitly
+translations managed explicitly in locale JSON files
+
+========================
+FRONTEND CONVENTIONS (χ)
+========================
+file_size(component) ≤ 300 LOC explicitly enforced
+naming(components) := PascalCase
+naming(hooks) := useX()
+no inline styles; explicitly use TailwindCSS utilities
+shared state via React Contexts or Zustand explicitly
+
+========================
+CLEANUP & CONSISTENCY (ω)
+========================
+∃ redundant_folder ∈ {manotar-clean, manotar-frontend} ⇒ archive_or_delete()
+∃ unused_script ∨ dead_code ⇒ remove()
+consistent naming explicitly: id ≠ ID ≠ Id ⇒ standardize as id
+
+========================
+DOCUMENTATION & MAINTENANCE (Δ)
+========================
+explicit documentation review frequency ⇒ quarterly
+update all docs explicitly post significant architecture/API/UI changes
+JSDoc/docstrings mandatory for public methods explicitly
+explicitly document API versions, types/interfaces, and environment setup steps
+
+========================
+DATA RETENTION POLICY (ρ)
+========================
+explicit GDPR retention policy:
+  - default user data retention ≤ 24 months
+  - explicit consent required for longer periods
+  - automatic anonymization after retention expiry
+  - explicit deletion/export capability documented for users
+
+========================
+DEVELOPER MINDSET (μ)
+========================
+∀ change c:
+  ask(c): "Does this improve maintainability, clarity, or user trust?"
+  build(c) as if handling mental health data for 1M users explicitly
+
+Manotar ≠ codebase — it = care delivery + agency amplification explicitly
+Ship with precision, empathy, and dignity explicitly
