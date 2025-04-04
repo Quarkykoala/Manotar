@@ -122,6 +122,22 @@ The dashboard offers:
 
 ## Development
 
+### Utility Scripts
+
+The project includes various utility scripts organized in the `scripts/` directory:
+
+```
+scripts/
+├── backend/   # Backend setup and operations
+├── db/        # Database initialization and management
+├── deploy/    # Deployment and maintenance
+├── frontend/  # Frontend application scripts
+├── setup/     # Project setup and configuration
+└── test/      # Testing utilities
+```
+
+For detailed information about available scripts, refer to the [scripts README](scripts/README.md).
+
 ### Running Tests
 
 ```bash
@@ -129,9 +145,15 @@ The dashboard offers:
 cd backend
 python -m pytest tests/
 
+# Or use the test script
+scripts/test/run_tests.bat
+
 # Frontend tests
 cd frontend
 npm test
+
+# Or use the test script
+scripts/frontend/test_frontend.bat
 ```
 
 ### Database Migrations
@@ -140,6 +162,9 @@ npm test
 # Apply migrations
 cd backend
 python run_sql_migrations.py
+
+# Or use the database scripts
+scripts/db/init_db.py  # For fresh setup
 ```
 
 ## Deployment
