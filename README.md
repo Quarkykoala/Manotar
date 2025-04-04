@@ -9,6 +9,10 @@ This project follows a monorepo structure with separate directories for backend 
 ```
 manobal/
 ├── backend/           # Flask API, models, services
+│   ├── src/
+│   │   ├── api/       # API endpoints (versioned)
+│   │   ├── models/    # Database models
+│   │   └── services/  # Business logic services
 ├── frontend/          # Next.js web application 
 ├── shared/            # Shared types and utilities
 ├── docs/              # Project documentation
@@ -24,7 +28,10 @@ manobal/
 - Python 3.8+
 - Node.js 16+
 - npm or yarn
-- MySQL/PostgreSQL database (or SQLite for development)
+- SQLite (development) or PostgreSQL (production)
+- Hume API key for sentiment analysis
+- Twilio account for WhatsApp integration
+- Google AI API key for Gemini models
 
 ### Setup
 
@@ -36,27 +43,24 @@ manobal/
 
 2. **Set up the backend**
    ```bash
-   # Create a Python virtual environment
-   python -m venv venv
+   cd backend
    
-   # Activate the virtual environment
-   # On Windows:
-   venv\Scripts\activate
-   # On macOS/Linux:
-   source venv/bin/activate
+   # On Linux/macOS:
+   ./setup.sh
    
-   # Install dependencies
-   pip install -r backend/requirements.txt
+   # On Windows (PowerShell):
+   .\setup.ps1
    
    # Set up environment variables
    cp .env.example .env
-   # Edit .env with your configuration
-   
-   # Setup the database
-   python -m scripts.init_db
+   # Edit .env with your configuration:
+   # - HUME_API_KEY
+   # - TWILIO_ACCOUNT_SID
+   # - TWILIO_AUTH_TOKEN
+   # - GOOGLE_API_KEY
    
    # Run the Flask application
-   python backend/run.py
+   flask run
    ```
 
 3. **Set up the frontend**
@@ -72,8 +76,49 @@ manobal/
    ```
 
 4. **Access the application**
-   - Backend API: http://localhost:5000
+   - Backend API: http://localhost:5000/api/v1
    - Frontend Dashboard: http://localhost:3000
+
+## API Structure
+
+The API follows a versioned structure:
+
+```
+/api/v1/
+  ├── auth/           # Authentication endpoints
+  ├── bot/            # WhatsApp bot webhook
+  ├── dashboard/      # HR dashboard data endpoints
+  ├── employees/      # Employee management
+  └── admin/          # Admin-only operations
+```
+
+## Key Features
+
+### Sentiment Analysis
+
+The platform uses the Hume API to analyze the sentiment of user messages. The sentiment analysis service:
+
+- Processes text to extract emotions and sentiment scores
+- Categorizes sentiment into 5 levels (very negative to very positive)
+- Extracts key emotions for reporting
+- Handles API failures with graceful fallbacks
+- Processes sentiment asynchronously to avoid webhook timeouts
+
+### WhatsApp Bot
+
+The WhatsApp bot provides:
+- Conversational mental health support using Gemini AI
+- User authentication and consent management
+- Message logging with sentiment analysis
+- Daily check-ins and reminders
+
+### HR Dashboard
+
+The dashboard offers:
+- Department-level sentiment analysis
+- Time-series trends of employee wellbeing
+- Keyword statistics to identify common concerns
+- Anonymized reporting to protect employee privacy
 
 ## Development
 
@@ -81,6 +126,7 @@ manobal/
 
 ```bash
 # Backend tests
+cd backend
 python -m pytest tests/
 
 # Frontend tests
@@ -91,11 +137,9 @@ npm test
 ### Database Migrations
 
 ```bash
-# Generate a new migration
-flask db migrate -m "Description of changes"
-
 # Apply migrations
-flask db upgrade
+cd backend
+python run_sql_migrations.py
 ```
 
 ## Deployment
@@ -115,4 +159,9 @@ This project is proprietary and confidential. Unauthorized copying, distribution
 
 ## Security and Privacy
 
-This application handles sensitive mental health data and complies with GDPR requirements. All data is anonymized and users have the right to request data deletion. 
+This application handles sensitive mental health data and complies with GDPR requirements:
+- All data is anonymized in dashboard views
+- Users have the right to request data deletion (within 30 days)
+- Data retention period is limited to 24 months
+- Secure authentication and role-based access control
+- All API endpoints are protected with appropriate authorization checks 

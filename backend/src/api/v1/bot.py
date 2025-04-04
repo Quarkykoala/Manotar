@@ -20,7 +20,8 @@ from nltk.tokenize import word_tokenize
 from nltk.corpus import stopwords
 from ...utils.audit_logger import audit_decorator, log_audit_event
 from ...utils.error_handler import api_route_wrapper, BadRequestError, ServerError
-from ...models.models import User, KeywordStat
+from ...models.models import User, KeywordStat, Message
+from ...services import queue_sentiment_analysis
 
 # Create a Blueprint for the bot API
 bot_bp = Blueprint('bot_api_v1', __name__)
@@ -363,7 +364,21 @@ def bot():
         # Update user record
         user.conversation_history = conversation_history
         update_message_count(user)
+        
+        # Save user message to the database
+        user_message = Message(
+            user_id=user.id,
+            content=incoming_msg,
+            is_from_user=True,
+            department=user.department,
+            location=user.location,
+            timestamp=datetime.utcnow()
+        )
+        db.session.add(user_message)
         db.session.commit()
+        
+        # Queue sentiment analysis for the message
+        queue_sentiment_analysis(user_message.id, user.id)
         
         # Extract and store keywords for sentiment analysis
         keywords = extract_keywords(incoming_msg)
@@ -378,6 +393,16 @@ def bot():
             )
             db.session.add(keyword_stat)
         
+        # Save AI response as a message
+        ai_message = Message(
+            user_id=user.id,
+            content=ai_response,
+            is_from_user=False,
+            department=user.department,
+            location=user.location,
+            timestamp=datetime.utcnow()
+        )
+        db.session.add(ai_message)
         db.session.commit()
         
         # Split response if it's too long for WhatsApp

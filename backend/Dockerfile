@@ -23,12 +23,23 @@ RUN python -m nltk.downloader -d /usr/local/share/nltk_data punkt stopwords
 # Copy application code
 COPY . .
 
-# Environment variables will be set through deployment platform interface
-EXPOSE 8080
+# Create instance directory for SQLite (if used)
+RUN mkdir -p instance
+
+# Run migrations
+RUN python run_sql_migrations.py
+
+# Set environment variables
+ENV FLASK_APP=src/app.py
+ENV FLASK_ENV=production
+ENV PYTHONUNBUFFERED=1
+
+# Expose the port
+EXPOSE 5000
 
 # Add healthcheck
 HEALTHCHECK --interval=30s --timeout=30s --start-period=5s --retries=3 \
-    CMD curl -f http://localhost:8080/ || exit 1
+    CMD curl -f http://localhost:5000/ || exit 1
 
 # Run using the entrypoint script
-CMD ["gunicorn", "--bind", "0.0.0.0:8080", "run:app", "--timeout", "120"] 
+CMD ["gunicorn", "--bind", "0.0.0.0:5000", "src.app:app"] 

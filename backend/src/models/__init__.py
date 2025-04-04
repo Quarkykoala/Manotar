@@ -13,7 +13,9 @@ def init_db(app):
     Args:
         app: Flask application instance
     """
-    db.init_app(app)
+    # Check if SQLAlchemy is already initialized
+    if not app.extensions.get('sqlalchemy'):
+        db.init_app(app)
     
     # Create all tables if they don't exist
     with app.app_context():

@@ -186,3 +186,14 @@ def api_route_wrapper(func):
             return jsonify(response), status_code
     
     return wrapper 
+
+
+def register_error_handlers(app):
+    """
+    Register all error handlers with the Flask app
+    
+    Args:
+        app: Flask application instance
+    """
+    logger.info("Registering error handlers")
+    handle_api_errors(app) 

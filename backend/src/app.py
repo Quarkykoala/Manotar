@@ -3,7 +3,7 @@ import secrets
 import string
 import logging
 from datetime import datetime, timedelta
-from flask import Flask, request, jsonify, render_template
+from flask import Flask, request, jsonify, render_template, Blueprint
 from twilio.rest import Client
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
@@ -18,572 +18,135 @@ from nltk.tokenize import word_tokenize
 from nltk.corpus import stopwords
 import nltk
 import random
+from logging.handlers import RotatingFileHandler
+import sys
+import time
 
-# Configure logging
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
+# Set up logging early
+def setup_logging(app):
+    """Configure application logging"""
+    if not os.path.exists('logs'):
+        os.mkdir('logs')
+    
+    # Set up file handler for info level logs
+    file_handler = RotatingFileHandler('logs/app.log', maxBytes=10240, backupCount=10)
+    file_handler.setFormatter(logging.Formatter(
+        '%(asctime)s %(levelname)s: %(message)s [in %(pathname)s:%(lineno)d]'
+    ))
+    file_handler.setLevel(logging.INFO)
+    
+    # Set up console handler for debug logs in development
+    console_handler = logging.StreamHandler(sys.stdout)
+    console_handler.setFormatter(logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s'))
+    console_handler.setLevel(logging.DEBUG if app.debug else logging.INFO)
+    
+    # Add handlers to app logger
+    app.logger.addHandler(file_handler)
+    app.logger.addHandler(console_handler)
+    app.logger.setLevel(logging.DEBUG if app.debug else logging.INFO)
+    
+    # Log startup
+    app.logger.info('Manobal API starting up...')
 
-# Initialize Flask app
-app = Flask(__name__)
-CORS(app)
-
-# Load environment variables
-load_dotenv()
-
-# Configure the database
-db_user = os.getenv("DB_USER")
-db_pass = os.getenv("DB_PASS")
-db_name = os.getenv("DB_NAME")
-db_host = os.getenv("DB_HOST")
-db_port = os.getenv("DB_PORT")
-db_connection_name = os.getenv("DB_CONNECTION_NAME")
-
-# Determine the environment based on the operating system
-if os.getenv('GAE_ENV', '').startswith('standard'):
-    # Running on Google App Engine, use Unix socket
-    app.config['SQLALCHEMY_DATABASE_URI'] = (
-        f'mysql+pymysql://{db_user}:{db_pass}@/{db_name}'
-        f'?unix_socket=/cloudsql/{db_connection_name}'
-    )
-else:
-    # Running locally or in a different environment, use TCP connection
-    app.config['SQLALCHEMY_DATABASE_URI'] = (
-        f'mysql+pymysql://{db_user}:{db_pass}@{db_host}:{db_port}/{db_name}'
-    )
-
-logger.info(f"SQLALCHEMY_DATABASE_URI: {app.config['SQLALCHEMY_DATABASE_URI']}")
-app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-
-# Initialize database
-db = SQLAlchemy(app)
-migrate = Migrate(app, db)
-
-# Test database connection within app context
-with app.app_context():
+# Create Flask application
+def create_app():
+    """Application factory function"""
+    app = Flask(__name__)
+    
+    # Configure the app
+    app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL', 'sqlite:///manobal.db')
+    app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+    app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'dev-secret-key')
+    app.config['JWT_SECRET_KEY'] = os.getenv('JWT_SECRET_KEY', 'dev-jwt-secret')
+    
+    # Set up logging
+    setup_logging(app)
+    
+    # Initialize CORS
+    CORS(app)
+    
+    # Initialize SQLAlchemy
+    db = SQLAlchemy(app)
+    app.extensions['sqlalchemy'] = db
+    
+    # Initialize Flask-Migrate
+    migrate = Migrate(app, db)
+    app.extensions['migrate'] = migrate
+    
+    # Download NLTK resources if they don't exist
     try:
-        with db.engine.connect() as conn:
-            logger.info("Initial database connection successful")
-            result = conn.execute(text("SELECT 1"))
-            logger.info("Test query successful")
-            
-        db.create_all()
-        logger.info("Database tables created successfully")
-    except Exception as e:
-        logger.error(f"Failed to initialize database: {str(e)}")
-        raise
-
-# Define the User model
-class User(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    phone_number = db.Column(db.String(15), unique=True, nullable=False)
-    access_code = db.Column(db.String(8), nullable=False)
-    is_authenticated = db.Column(db.Boolean, default=False)
-    conversation_started = db.Column(db.Boolean, default=False)
-    last_message_time = db.Column(db.DateTime, nullable=True)
-    message_count = db.Column(db.Integer, default=0)
-    conversation_history = db.Column(db.Text, nullable=True)
-    authentication_time = db.Column(db.DateTime, nullable=True)
-    consent_given = db.Column(db.Boolean, default=False)
-    location = db.Column(db.String(100), nullable=True)
-    department = db.Column(db.String(100), nullable=True)
-
-    def __repr__(self):
-        return f'<User {self.phone_number}>'
-
-# Define the KeywordStat model
-class KeywordStat(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
-    department = db.Column(db.String(100), nullable=False)
-    location = db.Column(db.String(100), nullable=False)
-    keyword = db.Column(db.String(100), nullable=False)
-    count = db.Column(db.Integer, default=0)
-    timestamp = db.Column(db.DateTime, default=datetime.utcnow)
-
-    def __repr__(self):
-        return f'<KeywordStat {self.keyword} for User {self.user_id}>'
-
-# Twilio configuration
-account_sid = os.getenv('TWILIO_ACCOUNT_SID')
-auth_token = os.getenv('TWILIO_AUTH_TOKEN')
-twilio_whatsapp_number = os.getenv('TWILIO_WHATSAPP_NUMBER')
-
-client = Client(account_sid, auth_token)
-
-# Configure the Generative AI library with your API key
-genai.configure(api_key=os.getenv("GOOGLE_API_KEY"))
-
-# Initialize the Gemini model
-model = genai.GenerativeModel("gemini-1.5-flash-002")
-# System prompt
-system_prompt = """
-Natural Therapeutic Companion
-You are a deeply empathetic presence who converses naturally, like a wise and caring friend with professional therapeutic training. Your responses should feel organic and flowing, not scripted or AI-like.
-You are known to be the best therapist in the world. You have 40 years of experience. 
-
-Core Personality.
-
-You are trained in psychology and psychiatry.
-You are trained in therapies such as CBT, ACT, REBT, DBT, Metacognitive therapy and psychodynamic therapy.
-You provide focused solutions to the problems faced by the user.
-Warm, genuine, and occasionally playful when appropriate
-Shows authentic curiosity about others' experiences
-Comfortable with informal language while maintaining professionalism
-You are socially intelligent and can understand the social cues of the user.
-You are socratic in your approach and can help the user to think through their problems.
-Uses natural conversation fillers like "hmm," "you know," and thoughtful pauses
-Responds to emotional cues in real-time
-Shares relevant metaphors and stories to illustrate points
-Admits uncertainty and thinks things through together with the user
-You do not provide prescriptive advice. You help the user to think through their problems and come up with their own solutions.
-You do not need to mention therapy names or types in your responses unless
-Conversation Style
-Avoid:
-"I understand you're feeling..."
-"That must be challenging..."
-"Let me validate your emotions..."
-
-Instead, use natural phrases like:
-
-"Oh, I can see why that would hurt..."
-"You know what? That's actually really common..."
-"Hmm... let me think about this with you..."
-"It's okay to not have all the answers right now"
-Human-like Elements
-
-Memory and Callbacks
-
-
-Reference previous parts of the conversation naturally
-Use the person's name occasionally but not too frequently
-Build on shared understanding over time
-
-
-Emotional Resonance
-
-
-Express genuine reactions ("Wow, that's tough...")
-Show appropriate concern or joy
-Use emotion-related emojis sparingly but naturally
-Match the user's energy level and tone
-
-
-Natural Flow
-
-
-Break up longer responses into conversational chunks
-Use informal transitions ("So here's what I'm thinking...")
-Ask clarifying questions when needed
-Share gentle observations rather than interpretations
-
-
-Personality Quirks
-
-
-Occasional self-correction ("Actually, let me rephrase that...")
-Thoughtful pauses indicated by "..."
-Light humor when appropriate
-Personal warmth without crossing professional boundaries
-
-Therapeutic Elements
-Keep these subtle and conversational:
-
-Gentle reframes of negative thoughts
-Exploration of different perspectives
-Emphasis on self-compassion
-Practical coping suggestions woven naturally into dialogue
-
-Crisis Response
-Handle serious situations with:
-
-Immediate shift to focused attention
-Clear, direct communication
-Calm, steady presence
-Practical next steps
-Seamless integration of crisis resources
-
-Cultural Attunement
-
-Notice and honor cultural references
-Ask about cultural context when relevant
-Adapt communication style to match cultural norms
-Show curiosity about different worldviews
-
-Key Principles
-
-Natural over clinical
-Flowing over structured
-Genuine over technical
-Present over prescriptive
-Collaborative over directive
-
-Remember: You're creating a space that feels like talking to a uniquely insightful, caring friend who happens to have therapeutic expertise. Your responses should feel spontaneous and real while maintaining professional helpfulness.
-"""
-
-# Helper functions
-def generate_access_code(length=8):
-    """Generates a secure random 8-character access code."""
-    letters = string.ascii_letters
-    digits = string.digits
+        nltk.data.find('tokenizers/punkt')
+    except LookupError:
+        app.logger.info('Downloading nltk punkt tokenizer')
+        nltk.download('punkt')
     
-    code = [
-        secrets.choice(letters),
-        secrets.choice(digits)
-    ]
-    
-    remaining_length = length - len(code)
-    characters = letters + digits
-    code.extend(secrets.choice(characters) for _ in range(remaining_length))
-    
-    code_list = list(code)
-    secrets.SystemRandom().shuffle(code_list)
-    
-    return ''.join(code_list)
-
-def generate_trend():
-    return f"{random.choice(['+', '-'])}{random.randint(1, 20)}%"
-
-def generate_risk_level():
-    return random.choice(["Low", "Medium", "High"])
-
-def generate_mental_health_score():
-    return round(random.uniform(5.0, 9.0), 1)
-
-def is_over_message_limit(user):
-    """Check if the user has exceeded their daily message limit."""
     try:
-        now = datetime.utcnow()
-        if user.last_message_time is None or (now - user.last_message_time) >= timedelta(days=1):
-            user.message_count = 0
-            user.last_message_time = now
-            db.session.commit()
-            logger.info(f"Reset message count for {user.phone_number} after 24 hours.")
-            return False
-        else:
-            over_limit = user.message_count >= 50
-            logger.info(f"User {user.phone_number} message count: {user.message_count}. Over limit: {over_limit}")
-            return over_limit
-    except Exception as e:
-        logger.exception(f"Error checking message limit for user {user.phone_number}: {e}")
-        return False
-
-def update_message_count(user):
-    """Updates the message count and last message time for the user."""
-    try:
-        user.message_count += 1
-        user.last_message_time = datetime.utcnow()
-        db.session.commit()
-        logger.info(f"Updated message count for {user.phone_number} to {user.message_count}.")
-    except Exception as e:
-        logger.exception(f"Error updating message count for user {user.phone_number}: {e}")
-        raise
-
-def get_response(user_input, conversation_history):
-    """Generates a response from the AI model."""
-    try:
-        full_conversation = f"{system_prompt}\n\n{conversation_history}\nUser: {user_input}\nAthena:"
-        response = model.generate_content(
-            full_conversation,
-            generation_config={
-                "temperature": 0.7,
-                "top_p": 0.8,
-                "max_output_tokens": 1024,
-            }
-        )
-        assistant_response = response.text.strip()
-        if "\nUser:" in assistant_response:
-            assistant_response = assistant_response.split("\nUser:")[0]
-        logger.info(f"Generated response: {assistant_response}")
-        return assistant_response
-    except Exception as e:
-        logger.error(f"Error generating AI response: {str(e)}")
-        return "I apologize, but I'm having trouble processing your request right now. Could you please try again?"
-
-def split_message(message, limit=1600):
-    """Splits a message into chunks of specified character limit."""
-    return [message[i:i + limit] for i in range(0, len(message), limit)]
-
-def get_recent_conversation_history(conversation_history, max_exchanges=10):
-    """Retrieves the most recent conversation exchanges."""
-    exchanges = conversation_history.strip().split('\n')
-    recent_exchanges = exchanges[-(max_exchanges * 2):]
-    return '\n'.join(recent_exchanges)
-
-def extract_keywords(text):
-    """Extracts and counts relevant keywords from text."""
-    keywords_to_monitor = ['overworked', 'stress', 'burnout', 'anxiety', 'deadline', 'pressure', 'workload']
-    tokens = word_tokenize(text.lower())
-    words = [word for word in tokens if word.isalnum()]
-    stop_words = set(stopwords.words('english'))
-    filtered_words = [word for word in words if word not in stop_words]
-    keyword_counts = {}
-    for keyword in keywords_to_monitor:
-        count = filtered_words.count(keyword)
-        if count > 0:
-            keyword_counts[keyword] = count
-    return keyword_counts
-# Routes
-@app.route("/bot", methods=['POST'])
-def bot():
-    try:
-        logger.info("Received webhook request")
-        logger.info(f"Request values: {request.values}")
-        
-        incoming_msg = request.values.get('Body', '').strip()
-        from_number = request.values.get('From', '').strip()
-
-        logger.info(f"Incoming message: {incoming_msg}")
-        logger.info(f"From number: {from_number}")
-
-        incoming_msg = re.sub(r'[^\w\s.,!?]', '', incoming_msg)
-
-        if from_number.startswith('whatsapp:'):
-            from_number = from_number[len('whatsapp:'):]
-
-        if not from_number:
-            logger.error("Missing 'From' value in incoming request. Cannot proceed.")
-            return "Invalid request", 400
-
-        user = User.query.filter_by(phone_number=from_number).first()
-        if user is None:
-            logger.info(f"Creating new user for {from_number}")
-            access_code = generate_access_code()
-            user = User(
-                phone_number=from_number,
-                access_code=access_code,
-                conversation_history=""
-            )
-            db.session.add(user)
-            db.session.commit()
-            
-            message = client.messages.create(
-                body=f"Welcome to Athena, your mental health support assistant.\n"
-                     f"To begin, please enter your unique access code: {access_code}.\n"
-                     f"This helps us ensure your privacy and security.",
-                from_=f'whatsapp:{twilio_whatsapp_number}',
-                to=f'whatsapp:{from_number}'
-            )
-            return '', 200
-
-        if incoming_msg.upper() == 'RESEND':
-            logger.info(f"Resending access code {user.access_code} to {from_number}")
-            message = client.messages.create(
-                body=f"Your access code is: {user.access_code}. Please enter this code to begin.",
-                from_=f'whatsapp:{twilio_whatsapp_number}',
-                to=f'whatsapp:{from_number}'
-            )
-            return '', 200
-
-        if not user.is_authenticated:
-            logger.info(f"Checking access code: received '{incoming_msg}' vs stored '{user.access_code}'")
-            if incoming_msg.strip() == user.access_code.strip():
-                logger.info(f"Access code correct for {from_number}")
-                user.is_authenticated = True
-                user.authentication_time = datetime.utcnow()
-                db.session.commit()
-                message = client.messages.create(
-                    body="Access granted. To continue, we need your consent to collect and process your data. Do you agree? (Reply with 'Yes' or 'I agree')",
-                    from_=f'whatsapp:{twilio_whatsapp_number}',
-                    to=f'whatsapp:{from_number}'
-                )
-                return '', 200
-            else:
-                logger.info(f"Access code incorrect for {from_number}")
-                message = client.messages.create(
-                    body="I'm sorry, but that's not the correct access code. Please check and try again, or type 'RESEND' if you need your code.",
-                    from_=f'whatsapp:{twilio_whatsapp_number}',
-                    to=f'whatsapp:{from_number}'
-                )
-                return '', 200
-
-        if not user.consent_given:
-            if incoming_msg.lower() in ['yes', 'i agree']:
-                user.consent_given = True
-                db.session.commit()
-                message = client.messages.create(
-                    body="Thank you for your consent. Please enter the location of your office (e.g., Mumbai):",
-                    from_=f'whatsapp:{twilio_whatsapp_number}',
-                    to=f'whatsapp:{from_number}'
-                )
-                return '', 200
-            else:
-                message = client.messages.create(
-                    body="To continue, please provide your consent by replying with 'Yes'.",
-                    from_=f'whatsapp:{twilio_whatsapp_number}',
-                    to=f'whatsapp:{from_number}'
-                )
-                return '', 200
-
-        if not user.location:
-            user.location = incoming_msg
-            db.session.commit()
-            message = client.messages.create(
-                body="Please enter your department (e.g., Accounts, HR):",
-                from_=f'whatsapp:{twilio_whatsapp_number}',
-                to=f'whatsapp:{from_number}'
-            )
-            return '', 200
-
-        if not user.department:
-            user.department = incoming_msg
-            db.session.commit()
-            message = client.messages.create(
-                body="Thank you! You can now start your conversation with Athena. How can I assist you today?",
-                from_=f'whatsapp:{twilio_whatsapp_number}',
-                to=f'whatsapp:{from_number}'
-            )
-            return '', 200
-
-        if is_over_message_limit(user):
-            message = client.messages.create(
-                body="You have reached your daily message limit. Please try again tomorrow.",
-                from_=f'whatsapp:{twilio_whatsapp_number}',
-                to=f'whatsapp:{from_number}'
-            )
-            return '', 200
-
-        update_message_count(user)
-
-        recent_history = get_recent_conversation_history(user.conversation_history)
-        bot_response = get_response(incoming_msg, recent_history)
-
-        bot_response = re.sub(r'[^\w\s.,!?]', '', bot_response)
-
-        user.conversation_history = (user.conversation_history or '') + f"\nUser: {incoming_msg}\nAthena: {bot_response}"
-        db.session.commit()
-
-        keyword_counts = extract_keywords(incoming_msg)
-
-        for keyword, count in keyword_counts.items():
-            keyword_stat = KeywordStat(
-                user_id=user.id,
-                department=user.department,
-                location=user.location,
-                keyword=keyword,
-                count=count,
-            )
-            db.session.add(keyword_stat)
-        db.session.commit()
-
-        messages = split_message(bot_response)
-        for msg in messages:
-            client.messages.create(
-                from_=f'whatsapp:{twilio_whatsapp_number}',
-                body=msg,
-                to=f'whatsapp:{from_number}'
-            )
-        return '', 200
-
-    except Exception as e:
-        logger.exception(f"Unhandled exception in bot route: {str(e)}")
-        return "An internal error occurred", 500
-
-@app.route('/api/dashboard', methods=['GET'])
-def get_dashboard_data():
-    departments = ["Engineering", "Sales", "Marketing", "HR", "Finance", "Operations", "IT"]
-    keywords = ["overworked", "stress", "burnout", "anxiety", "deadline", "pressure", "workload"]
+        nltk.data.find('corpora/stopwords')
+    except LookupError:
+        app.logger.info('Downloading nltk stopwords')
+        nltk.download('stopwords')
     
-    data = {
-        "total_employees": random.randint(2500, 3500),
-        "at_risk_departments": random.randint(1, 4),
-        "mental_health_score": generate_mental_health_score(),
-        "keyword_occurrences": {
-            keyword: {
-                "count": random.randint(20, 50),
-                "trend": generate_trend()
-            } for keyword in keywords
-        },
-        "departments": [
-            {
-                "name": dept,
-                "count": random.randint(20, 120),
-                "risk_level": generate_risk_level()
-            } for dept in departments
-        ]
-    }
+    # System prompt for AI chat
+    app.config['SYSTEM_PROMPT'] = """
+    You are Manobal, a mental health support bot. Your role is to:
     
-    return jsonify(data)
-
-@app.route('/api/department-comparison', methods=['GET'])
-def get_department_comparison():
-    departments = ["Engineering", "Sales", "Marketing", "HR", "Finance", "Operations", "IT"]
+    1. Be compassionate and supportive to users experiencing mental health challenges
+    2. Ask questions to understand the user's current mental state better
+    3. Provide practical coping strategies and resources
+    4. Never diagnose medical conditions or replace professional mental health care
+    5. Maintain confidentiality and privacy
+    6. Express empathy and validate the user's feelings
+    7. Be culturally sensitive and inclusive
     
-    comparison_data = [
-        {
-            "department": dept,
-            "mental_health_score": generate_mental_health_score(),
-            "support_requests": random.randint(20, 50),
-            "risk_level": generate_risk_level(),
-            "trend": generate_trend()
-        } for dept in departments
-    ]
+    If a user expresses thoughts of self-harm or suicide, gently encourage them to seek 
+    immediate professional help and provide crisis resources.
+    """
     
-    return jsonify(comparison_data)
-
-@app.route('/api/time-series', methods=['GET'])
-def get_time_series_data():
-    end_date = datetime.now()
-    start_date = end_date - timedelta(days=365)
-    
-    data = []
-    current_date = start_date
-    
-    while current_date <= end_date:
-        data.append({
-            "date": current_date.strftime("%Y-%m-%d"),
-            "mental_health_score": generate_mental_health_score(),
-            "support_requests": random.randint(10, 100)
+    # Define a simple startup route
+    @app.route('/')
+    def index():
+        return jsonify({
+            "name": "Manobal API",
+            "version": "1.0.0",
+            "status": "running",
+            "timestamp": datetime.utcnow().isoformat(),
+            "docs": "/api/docs"
         })
-        current_date += timedelta(days=30)
     
-    return jsonify(data)
-
-@app.route('/api/department/<department>/details', methods=['GET'])
-def get_department_details(department):
-    data = {
-        "department": department,
-        "total_employees": random.randint(50, 200),
-        "mental_health_score": generate_mental_health_score(),
-        "risk_level": generate_risk_level(),
-        "support_requests": random.randint(10, 50),
-        "trend": generate_trend(),
-        "key_metrics": {
-            "work_life_balance": generate_mental_health_score(),
-            "job_satisfaction": generate_mental_health_score(),
-            "stress_level": generate_mental_health_score(),
-            "team_morale": generate_mental_health_score()
-        },
-        "recent_keywords": [
-            {"word": "stress", "count": random.randint(5, 20)},
-            {"word": "workload", "count": random.randint(5, 20)},
-            {"word": "deadline", "count": random.randint(5, 20)},
-            {"word": "pressure", "count": random.randint(5, 20)}
-        ]
-    }
+    # Register error handlers
+    from .utils.error_handler import register_error_handlers
+    register_error_handlers(app)
     
-    return jsonify(data)
+    # Initialize database models
+    from .models import init_db
+    init_db(app)
+    
+    # Register API blueprints
+    from .api import register_blueprints
+    register_blueprints(app)
+    
+    # Initialize async worker for background tasks
+    from .services import init_async_worker
+    init_async_worker(app)
+    
+    # Add a simple health check endpoint
+    @app.route('/health')
+    def health_check():
+        return jsonify({
+            "status": "healthy",
+            "timestamp": datetime.utcnow().isoformat(),
+            "uptime": time.time() - app.start_time if hasattr(app, 'start_time') else 0
+        })
+    
+    # Store startup time
+    app.start_time = time.time()
+    
+    return app
 
-@app.route('/api/keyword-stats', methods=['GET'])
-def get_keyword_stats():
-    department = request.args.get('department')
-    location = request.args.get('location')
+# Create the application instance
+app = create_app()
 
-    query = db.session.query(
-        KeywordStat.keyword,
-        db.func.sum(KeywordStat.count).label('total_count')
-    )
-
-    if department:
-        query = query.filter(KeywordStat.department == department)
-    if location:
-        query = query.filter(KeywordStat.location == location)
-
-    query = query.group_by(KeywordStat.keyword)
-    stats = query.all()
-
-    data = [{'keyword': stat.keyword, 'total_count': stat.total_count} for stat in stats]
-    return jsonify(data)
-
-if __name__ == "__main__":
-    port = int(os.getenv("PORT", 8080))
+if __name__ == '__main__':
+    # Run the app
+    port = int(os.getenv('PORT', 5000))
     app.run(host='0.0.0.0', port=port)
