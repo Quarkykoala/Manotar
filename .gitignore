@@ -163,3 +163,12 @@ yarn-error.log*
 *.cert
 
 secrets/
+
+# Google Cloud service account keys and sensitive credentials
+*-*-*.json
+mental-health-chatbot-*.json
+*credentials*.json
+*credential*.json
+*key*.json
+*secret*.json
+*service-account*.json
