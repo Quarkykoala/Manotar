@@ -1,8 +1,0 @@
-venv/
-__pycache__/
-*.pyc
-.env
-.git
-.gitignore
-*.db
-mental-health-chatbot-430515-c8185389d49b.json 
