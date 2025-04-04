@@ -165,3 +165,30 @@ This application handles sensitive mental health data and complies with GDPR req
 - Data retention period is limited to 24 months
 - Secure authentication and role-based access control
 - All API endpoints are protected with appropriate authorization checks 
+
+### Handling Sensitive Files
+
+For security reasons, sensitive files such as API keys and service account credentials are **never** committed to the repository. 
+
+- All sensitive credentials should be stored in the `.env` file (which is ignored by Git)
+- Service account keys should be placed in the `secrets/` directory, which is excluded from Git
+- When setting up a new environment, request the necessary credentials from an administrator
+- Reference credentials only through environment variables, never hardcode them
+
+Example of proper credential handling in code:
+```python
+import os
+from dotenv import load_dotenv
+
+load_dotenv()  # Load variables from .env
+
+# Access credentials safely
+api_key = os.environ.get("HUME_API_KEY")
+```
+
+If you accidentally commit sensitive information, follow these steps:
+1. Immediately remove the file from Git using `git rm --cached <file>`
+2. Commit this removal
+3. Move the file to the `secrets/` directory
+4. Update `.gitignore` to prevent future occurrences
+5. Contact an administrator as the credentials may need to be rotated 
