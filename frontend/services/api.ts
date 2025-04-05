@@ -1,3 +1,5 @@
+import { SentimentDataPoint } from '../types/sentiment';
+
 // Mock data
 const mockDashboardData = {
   total_employees: 2850,
@@ -18,7 +20,154 @@ const mockDashboardData = {
   ]
 };
 
-const API_BASE_URL = 'http://localhost:5000/api';
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api/v1';
+
+interface ApiOptions {
+  method?: string;
+  headers?: Record<string, string>;
+  body?: any;
+}
+
+interface ApiError extends Error {
+  status?: number;
+  data?: any;
+}
+
+// Helper function to handle API responses
+async function handleResponse<T>(response: Response): Promise<T> {
+  if (!response.ok) {
+    const error: ApiError = new Error(response.statusText);
+    error.status = response.status;
+    try {
+      error.data = await response.json();
+    } catch {
+      // If JSON parsing fails, use status text
+    }
+    throw error;
+  }
+  return response.json();
+}
+
+// Helper function to make API requests
+async function makeRequest<T>(endpoint: string, options: ApiOptions = {}): Promise<T> {
+  const token = localStorage.getItem('auth_token');
+  
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+    ...options.headers,
+  };
+
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+
+  const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+    method: options.method || 'GET',
+    headers,
+    body: options.body ? JSON.stringify(options.body) : undefined,
+    credentials: 'include', // Include cookies for CSRF protection
+  });
+
+  return handleResponse<T>(response);
+}
+
+// API endpoints
+export const api = {
+  // Authentication
+  auth: {
+    login: (email: string, password: string) =>
+      makeRequest('/auth/login', {
+        method: 'POST',
+        body: { email, password },
+      }),
+    logout: () => makeRequest('/auth/logout', { method: 'POST' }),
+    refreshToken: () => makeRequest('/auth/refresh', { method: 'POST' }),
+  },
+
+  // Sentiment Analysis
+  sentiment: {
+    getHistory: (params: { startDate: string; endDate: string }) =>
+      makeRequest<SentimentDataPoint[]>(`/sentiment/history?${new URLSearchParams(params)}`),
+    getDepartmentMetrics: (departmentId: string) =>
+      makeRequest<any>(`/sentiment/department/${departmentId}`),
+    getRiskAlerts: () => makeRequest<any>('/sentiment/risk-alerts'),
+  },
+
+  // User Management
+  users: {
+    getCurrent: () => makeRequest<any>('/users/me'),
+    updatePreferences: (preferences: any) =>
+      makeRequest('/users/preferences', {
+        method: 'PUT',
+        body: preferences,
+      }),
+  },
+
+  // GDPR
+  gdpr: {
+    requestDataExport: () =>
+      makeRequest('/gdpr/export', { method: 'POST' }),
+    updateConsent: (consents: Record<string, boolean>) =>
+      makeRequest('/gdpr/consent', {
+        method: 'PUT',
+        body: { consents },
+      }),
+    deleteAccount: () =>
+      makeRequest('/gdpr/delete-account', { method: 'POST' }),
+  },
+};
+
+// Error handling utilities
+export function isApiError(error: any): error is ApiError {
+  return error && error.status !== undefined;
+}
+
+export function getErrorMessage(error: any): string {
+  if (isApiError(error)) {
+    return error.data?.message || error.message;
+  }
+  return error?.message || 'An unknown error occurred';
+}
+
+// Request interceptor for token refresh
+let isRefreshing = false;
+let failedQueue: Array<{
+  resolve: (token: string) => void;
+  reject: (error: any) => void;
+}> = [];
+
+const processQueue = (error: any, token: string | null = null) => {
+  failedQueue.forEach((prom) => {
+    if (error) {
+      prom.reject(error);
+    } else {
+      prom.resolve(token!);
+    }
+  });
+
+  failedQueue = [];
+};
+
+export async function handleTokenRefresh() {
+  try {
+    if (!isRefreshing) {
+      isRefreshing = true;
+      const response = await api.auth.refreshToken();
+      const { token } = response;
+      localStorage.setItem('auth_token', token);
+      processQueue(null, token);
+      return token;
+    }
+    return new Promise((resolve, reject) => {
+      failedQueue.push({ resolve, reject });
+    });
+  } catch (error) {
+    processQueue(error, null);
+    throw error;
+  } finally {
+    isRefreshing = false;
+  }
+}
 
 export const fetchDashboardData = async (startDate?: Date, endDate?: Date) => {
   // For mock data, filter based on date range

@@ -1,0 +1,168 @@
+{
+  "dashboard": {
+    "title": "Mental Health Dashboard",
+    "overview": "Overview",
+    "sentimentTrends": "Sentiment Trends",
+    "checkInHistory": "Check-in History",
+    "departmentMetrics": "Department Metrics",
+    "riskAlerts": "Risk Alerts",
+    "filters": {
+      "department": "Department",
+      "timeRange": "Time Range",
+      "today": "Today",
+      "week": "This Week",
+      "month": "This Month",
+      "custom": "Custom Range"
+    }
+  },
+  "analytics": {
+    "sentimentScore": "Sentiment Score",
+    "checkInCompletion": "Check-in Completion Rate",
+    "participationRate": "Participation Rate",
+    "riskLevel": "Risk Level",
+    "trends": {
+      "improving": "Improving",
+      "declining": "Declining",
+      "stable": "Stable"
+    }
+  },
+  "common": {
+    "loading": "Loading...",
+    "error": "An error occurred",
+    "retry": "Retry",
+    "save": "Save",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "edit": "Edit",
+    "view": "View",
+    "export": "Export",
+    "noData": "No data available",
+    "rights": "All rights reserved.",
+    "privacy": "Privacy Policy",
+    "terms": "Terms of Service",
+    "accessibility": "Accessibility",
+    "contact": "Contact Us",
+    "help": "Help Center",
+    "logout": "Log Out"
+  },
+  "accessibility": {
+    "skipToMain": "Skip to main content",
+    "skipLinks": "Skip Links",
+    "skippedToContent": "Skipped to main content",
+    "skippedToSection": "Skipped to {{section}}",
+    "menuButton": "Toggle menu",
+    "closeButton": "Close",
+    "chartDescription": "Chart showing {{type}} data",
+    "loadingState": "Content is loading",
+    "required": "Required field",
+    "navigation": "Main navigation",
+    "search": "Search",
+    "userMenu": "User menu",
+    "notifications": "Notifications",
+    "settings": "Settings",
+    "keyboardShortcuts": "Keyboard Shortcuts",
+    "shortcutsNote": "Press ? at any time to view these shortcuts",
+    "shortcutGroups": {
+      "navigation": "Navigation",
+      "actions": "Actions",
+      "views": "Views",
+      "accessibility": "Accessibility"
+    },
+    "shortcuts": {
+      "focusSearch": "Focus search",
+      "clearSelection": "Clear selection",
+      "openCommandPalette": "Open command palette",
+      "saveChanges": "Save changes",
+      "undo": "Undo",
+      "redo": "Redo",
+      "toggleDarkMode": "Toggle dark mode",
+      "increaseFontSize": "Increase font size",
+      "decreaseFontSize": "Decrease font size",
+      "toggleMenu": "Toggle menu",
+      "closeModal": "Close modal",
+      "showShortcuts": "Show keyboard shortcuts"
+    },
+    "skipToSections": {
+      "main": "Skip to main content",
+      "nav": "Skip to navigation",
+      "search": "Skip to search",
+      "footer": "Skip to footer"
+    },
+    "announcements": {
+      "themeChanged": "Theme changed to {{theme}}",
+      "fontSizeChanged": "Font size changed to {{size}}",
+      "dataLoaded": "Data has been loaded",
+      "dataUpdated": "Data has been updated",
+      "errorOccurred": "An error has occurred",
+      "actionSuccess": "Action completed successfully",
+      "actionFailed": "Action failed"
+    },
+    "aria": {
+      "sortAscending": "Sort ascending",
+      "sortDescending": "Sort descending",
+      "selected": "Selected",
+      "expanded": "Expanded",
+      "collapsed": "Collapsed",
+      "checked": "Checked",
+      "unchecked": "Unchecked",
+      "required": "Required",
+      "optional": "Optional",
+      "current": "Current",
+      "new": "New",
+      "previous": "Previous",
+      "next": "Next",
+      "first": "First",
+      "last": "Last"
+    }
+  },
+  "errors": {
+    "title": "An error occurred",
+    "unknown": "An unknown error occurred",
+    "fetchFailed": "Failed to fetch data",
+    "unauthorized": "You are not authorized to view this content",
+    "sessionExpired": "Your session has expired",
+    "validation": "Please check your input",
+    "refresh": "Refresh page",
+    "retry": "Try again"
+  },
+  "settings": {
+    "title": "Settings",
+    "appearance": "Appearance",
+    "darkMode": "Dark Mode",
+    "toggleDarkMode": "Toggle dark mode",
+    "highContrast": "High Contrast",
+    "toggleHighContrast": "Toggle high contrast mode",
+    "fontSize": "Font Size",
+    "increaseFontSize": "Increase font size",
+    "decreaseFontSize": "Decrease font size",
+    "reset": "Reset",
+    "reducedMotion": "Reduced Motion",
+    "toggleReducedMotion": "Toggle reduced motion",
+    "helpText": "These settings help make the dashboard more accessible. Changes are saved automatically.",
+    "preferences": {
+      "title": "Preferences",
+      "language": "Language",
+      "notifications": "Notifications",
+      "dataPrivacy": "Data Privacy"
+    },
+    "appearance": {
+      "themeChanged": "Theme changed to {{theme}}",
+      "light": "Light",
+      "dark": "Dark"
+    }
+  },
+  "gdpr": {
+    "consent": {
+      "title": "Data Processing Consent",
+      "description": "Control how your data is processed and used",
+      "analytics": "Allow anonymous analytics",
+      "communications": "Receive important communications",
+      "thirdParty": "Share data with trusted partners"
+    },
+    "actions": {
+      "export": "Export My Data",
+      "delete": "Delete My Account",
+      "update": "Update Preferences"
+    }
+  }
+} 
