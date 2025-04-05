@@ -1,11 +1,18 @@
 """
-API package initializer
+API initialization module for the Manobal platform.
 
-This file sets up the API package and registers versioned API blueprints.
+This module initializes the API blueprints and middleware.
 """
+
+import os
 from flask import Flask, Blueprint, g, request, current_app
 import logging
 from backend.src.api.v1 import v1_bp
+from backend.src.api.v1.bot import bot
+from backend.src.api.v1.dashboard import dashboard
+from backend.src.api.v1.employees import employees
+from backend.src.api.v1.gdpr import gdpr
+from backend.src.utils.auth import init_jwt
 
 def create_api_blueprint():
     """
@@ -19,10 +26,28 @@ def create_api_blueprint():
     
     return api_bp
 
-def init_app(app: Flask):
+def init_api(app: Flask):
     """
-    Initialize the API with the Flask application
+    Initialize API routes and middleware
+    
+    Args:
+        app: Flask application instance
     """
+    # Initialize JWT
+    init_jwt(app)
+    
+    # Register blueprints
+    app.register_blueprint(bot, url_prefix='/api/v1/bot')
+    app.register_blueprint(dashboard, url_prefix='/api/v1/dashboard')
+    app.register_blueprint(employees, url_prefix='/api/v1/employees')
+    app.register_blueprint(gdpr, url_prefix='/api/v1/gdpr')
+    
+    # Configure GDPR exports directory
+    gdpr_exports_dir = os.path.join(app.instance_path, 'gdpr_exports')
+    if not os.path.exists(gdpr_exports_dir):
+        os.makedirs(gdpr_exports_dir)
+    app.config['GDPR_EXPORTS_DIR'] = gdpr_exports_dir
+    
     # Register the API blueprint
     api_bp = create_api_blueprint()
     app.register_blueprint(api_bp)
@@ -30,34 +55,24 @@ def init_app(app: Flask):
     # Register middleware to add API version header
     @app.after_request
     def add_api_version_header(response):
-        """Add API version header to all responses from versioned API endpoints"""
-        if request.path.startswith('/api/v'):
+        """Add API version header to responses"""
+        if request.path.startswith('/api/'):
             # Extract version from path
-            path_parts = request.path.split('/')
-            if len(path_parts) > 2:
-                version = path_parts[2]  # '/api/v1/...' -> 'v1'
-                
-                # Add version header
+            parts = request.path.split('/')
+            if len(parts) > 2 and parts[2].startswith('v'):
+                version = parts[2]
                 response.headers['X-API-Version'] = version
                 
-                # Add deprecation header if needed
+                # Mark v1 as deprecated when v2 is released
                 if version == 'v1':
-                    # v1 is not deprecated yet
-                    response.headers['X-API-Deprecated'] = 'false'
-                else:
-                    # Future versions may deprecate older ones
-                    pass
-                    
+                    response.headers['X-API-Deprecated'] = 'true'
+                    response.headers['X-API-Deprecation-Date'] = '2024-12-31'
+        
         return response
     
-    # Log all registered routes for debugging
-    @app.before_first_request
-    def log_routes():
-        """Log all registered routes for debugging"""
-        routes = []
+    # Log registered routes
+    if app.debug:
         for rule in app.url_map.iter_rules():
-            routes.append(f"{rule.endpoint}: {rule.rule} [{', '.join(rule.methods)}]")
-        
-        app.logger.info(f"Registered routes:\n" + "\n".join(routes))
+            app.logger.debug(f"Route: {rule.rule} [{', '.join(rule.methods)}]")
     
     return app 

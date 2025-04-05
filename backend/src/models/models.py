@@ -1,6 +1,6 @@
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy.orm import relationship
-from datetime import datetime
+from datetime import datetime, timedelta
 from flask_login import UserMixin
 from werkzeug.security import generate_password_hash, check_password_hash
 
@@ -60,11 +60,40 @@ class AuthUser(db.Model):
     email = db.Column(db.String(100), unique=True, nullable=False)
     name = db.Column(db.String(100), nullable=False)
     password_hash = db.Column(db.String(200), nullable=False)
-    role = db.Column(db.String(20), nullable=False)  # 'admin', 'hr'
+    role = db.Column(db.String(20), nullable=False)  # 'admin', 'hr', 'bot'
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     last_login = db.Column(db.DateTime)
+    is_active = db.Column(db.Boolean, default=True)
+    data_retention_consent = db.Column(db.Boolean, default=False)
+    data_retention_consent_date = db.Column(db.DateTime)
+    data_retention_expiry = db.Column(db.DateTime)
+    is_anonymized = db.Column(db.Boolean, default=False)
     audit_logs = db.relationship('AuditLog', backref='auth_user', lazy=True)
+    gdpr_requests = db.relationship('GDPRRequest', backref='auth_user', lazy=True)
+
+    def set_password(self, password):
+        self.password_hash = generate_password_hash(password)
+
+    def check_password(self, password):
+        return check_password_hash(self.password_hash, password)
+
+    def set_data_retention_consent(self, consent=True, retention_months=24):
+        """Set user's data retention consent and calculate expiry"""
+        self.data_retention_consent = consent
+        self.data_retention_consent_date = datetime.utcnow()
+        if consent:
+            self.data_retention_expiry = self.data_retention_consent_date + timedelta(days=retention_months * 30)
+        else:
+            self.data_retention_expiry = None
+
+    def should_anonymize(self):
+        """Check if user data should be anonymized based on retention policy"""
+        if not self.data_retention_consent:
+            return True
+        if self.data_retention_expiry and datetime.utcnow() > self.data_retention_expiry:
+            return True
+        return False
 
 class AuditLog(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -196,4 +225,34 @@ class CheckIn(db.Model):
             'created_at': self.created_at.isoformat(),
             'completed_at': self.completed_at.isoformat() if self.completed_at else None,
             'is_expired': self.is_expired
+        }
+
+class GDPRRequest(db.Model):
+    """Model for tracking GDPR-related data requests"""
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('auth_user.id'), nullable=False)
+    request_type = db.Column(db.String(20), nullable=False)  # 'export', 'delete', 'access'
+    status = db.Column(db.String(20), default='pending')  # pending, processing, completed, failed
+    requested_at = db.Column(db.DateTime, default=datetime.utcnow)
+    completed_at = db.Column(db.DateTime)
+    due_date = db.Column(db.DateTime)  # 30 days from request
+    data_url = db.Column(db.String(500))  # For export requests
+    notes = db.Column(db.Text)
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Set due date to 30 days from request
+        self.due_date = self.requested_at + timedelta(days=30)
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'user_id': self.user_id,
+            'request_type': self.request_type,
+            'status': self.status,
+            'requested_at': self.requested_at.isoformat(),
+            'completed_at': self.completed_at.isoformat() if self.completed_at else None,
+            'due_date': self.due_date.isoformat(),
+            'data_url': self.data_url,
+            'notes': self.notes
         }
