@@ -1,53 +1,63 @@
-# Manobal Testing Framework
+# Manobal Tests
 
-This directory contains all tests for the Manobal platform, organized according to the monorepo pattern.
+This directory contains tests for the Manobal application. Tests are organized into the following directories:
 
 ## Directory Structure
 
-- `tests/backend/` - Backend tests for API, models, and services
-- `tests/frontend/` - Frontend tests for components, pages, and hooks
-- `tests/integration/` - Tests that span the frontend-backend boundary
-- `tests/fixtures/` - Test data and fixtures shared across tests
+- `backend/`: Unit and integration tests for backend services, models, and API endpoints
+- `frontend/`: Unit tests for frontend components and utilities
+- `integration/`: End-to-end tests spanning the frontend and backend
+- `fixtures/`: Common test fixtures and data
 
 ## Running Tests
 
-To run all tests:
+Use the provided test scripts for convenience:
 
 ```bash
-pytest
+# Run all tests
+scripts/test/run_all_tests.bat  # Windows
+python scripts/test/run_all_tests.py  # Unix
+
+# Run only backend tests
+scripts/test/run_backend_tests.bat  # Windows
+python scripts/test/run_backend_tests.py  # Unix
+
+# Run only frontend tests
+scripts/test/run_frontend_tests.bat  # Windows
+python scripts/test/run_frontend_tests.py  # Unix
+
+# Run only integration tests
+scripts/test/run_integration_tests.bat  # Windows
+python scripts/test/run_integration_tests.py  # Unix
 ```
 
-To run only backend tests:
+## Configuration
 
-```bash
-pytest tests/backend
-```
+Test configuration is centralized in:
 
-To run only frontend tests:
+- `conftest.py`: Pytest configuration and shared fixtures
+- `frontend/jest.config.js`: Jest configuration for frontend tests
 
-```bash
-pytest tests/frontend
-```
+## Coverage Goals
 
-To run only integration tests:
+- Backend test coverage: ≥ 80%
+- Frontend test coverage: ≥ 70%
+- All critical user flows must be covered by integration tests
 
-```bash
-pytest tests/integration
-```
+## Contributing Tests
 
-## Test Coverage
+When adding new features:
 
-Test coverage is automatically generated when running tests and can be found in:
-- Terminal output
-- `coverage.xml` file (for integration with CI/CD tools)
+1. Create appropriate test files following naming conventions
+2. Follow the Arrange-Act-Assert pattern for test structure
+3. Use existing fixtures where possible
+4. Ensure tests are isolated and don't depend on previous test state
 
-## Adding New Tests
+## Test Documentation
 
-1. Place your test in the appropriate directory (`backend/`, `frontend/`, or `integration/`)
-2. Use the appropriate fixtures from `conftest.py`
-3. Name your test file with the prefix `test_` (e.g., `test_user_service.py`)
-4. Name your test functions with the prefix `test_` (e.g., `test_user_creation()`)
+See the detailed [Testing Guide](../docs/testing/testing_guide.md) for:
 
-## Test Fixtures
-
-Common fixtures are defined in the root `conftest.py` file. Module-specific fixtures should be defined in a `conftest.py` file in the corresponding test subdirectory. 
+- Best practices for writing tests
+- Mocking strategies
+- Troubleshooting information
+- CI/CD integration details 

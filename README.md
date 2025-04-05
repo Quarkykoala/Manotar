@@ -138,42 +138,58 @@ scripts/
 
 For detailed information about available scripts, refer to the [scripts README](scripts/README.md).
 
-### Running Tests
+### Testing Infrastructure
 
-The project uses a unified test structure organized by domain:
+The project implements a robust testing infrastructure with automated test execution and coverage reporting:
 
 ```
 tests/
 ├── backend/     # Backend API, models, services tests
-├── frontend/    # Frontend component, page, hook tests
-├── integration/ # Tests that span frontend-backend boundary
-└── fixtures/    # Test data and fixtures shared across tests
+├── frontend/    # Frontend component tests with Jest
+├── integration/ # End-to-end tests for frontend-backend interaction
+└── fixtures/    # Shared test fixtures and data
 ```
 
-To run all tests:
+#### Running Tests
+
+We provide dedicated scripts for running different test suites:
 
 ```bash
-# Run all tests from the project root
-pytest
+# Run all tests with coverage reporting
+scripts/test/run_all_tests.bat       # Windows
+python scripts/test/run_all_tests.py # Unix
 
-# Or use the test script
-scripts/test/run_tests.bat
+# Run backend tests only
+scripts/test/run_backend_tests.bat   # Windows
+python scripts/test/run_backend_tests.py # Unix
+
+# Run frontend tests only
+scripts/test/run_frontend_tests.bat  # Windows
+python scripts/test/run_frontend_tests.py # Unix
+
+# Run integration tests only
+scripts/test/run_integration_tests.bat # Windows
+python scripts/test/run_integration_tests.py # Unix
 ```
 
-To run specific test categories:
+#### Test Coverage Goals
 
-```bash
-# Backend tests only
-pytest tests/backend
+- Backend test coverage: ≥ 80%
+- Frontend test coverage: ≥ 70%
+- All critical user flows covered by integration tests
 
-# Frontend tests only
-pytest tests/frontend
+For comprehensive details about testing, see:
+- [Testing Guide](docs/testing/testing_guide.md)
+- [Tests README](tests/README.md)
 
-# Integration tests only
-pytest tests/integration
-```
+### CI/CD Integration
 
-For more details, see the [testing documentation](tests/README.md).
+Tests are automatically run on GitHub Actions for every push and pull request:
+
+- Backend tests with Pytest and coverage reporting
+- Frontend tests with Jest
+- Linting for both Python and TypeScript/JavaScript code
+- Coverage reports uploaded to Codecov
 
 ### Database Migrations
 
@@ -196,6 +212,7 @@ See the [deployment documentation](docs/setup/deployment.md) for detailed instru
 - [Architecture](docs/architecture/README.md)
 - [Setup Guides](docs/setup/README.md)
 - [User Guides](docs/user-guides/README.md)
+- [Testing Guide](docs/testing/testing_guide.md)
 
 ## License
 
