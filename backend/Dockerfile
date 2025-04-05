@@ -30,7 +30,7 @@ RUN mkdir -p instance
 RUN python run_sql_migrations.py
 
 # Set environment variables
-ENV FLASK_APP=src/app.py
+ENV FLASK_APP=run.py
 ENV FLASK_ENV=production
 ENV PYTHONUNBUFFERED=1
 
@@ -39,7 +39,7 @@ EXPOSE 5000
 
 # Add healthcheck
 HEALTHCHECK --interval=30s --timeout=30s --start-period=5s --retries=3 \
-    CMD curl -f http://localhost:5000/ || exit 1
+    CMD curl -f http://localhost:5000/health || exit 1
 
-# Run using the entrypoint script
-CMD ["gunicorn", "--bind", "0.0.0.0:5000", "src.app:app"] 
+# Run using gunicorn
+CMD ["gunicorn", "--bind", "0.0.0.0:5000", "run:app"] 

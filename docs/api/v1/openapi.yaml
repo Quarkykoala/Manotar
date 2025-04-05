@@ -1,0 +1,865 @@
+openapi: 3.0.3
+info:
+  title: Manobal API
+  description: API for the Manobal mental health platform
+  version: 1.0.0
+  contact:
+    name: Manobal Support
+    email: support@example.com
+servers:
+  - url: https://api.manobal.com/api/v1
+    description: Production server
+  - url: http://localhost:5000/api/v1
+    description: Development server
+
+tags:
+  - name: Authentication
+    description: User authentication endpoints
+  - name: Dashboard
+    description: HR dashboard data endpoints
+  - name: WhatsApp Bot
+    description: WhatsApp integration endpoints
+  - name: Employees
+    description: Employee management endpoints
+
+paths:
+  /auth/login:
+    post:
+      tags:
+        - Authentication
+      summary: User login
+      description: Authenticates a user and returns a JWT token
+      operationId: loginUser
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - email
+                - password
+              properties:
+                email:
+                  type: string
+                  format: email
+                password:
+                  type: string
+                  format: password
+      responses:
+        '200':
+          description: Successful login
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  token:
+                    type: string
+                  expires_at:
+                    type: string
+                    format: date-time
+                  user:
+                    type: object
+                    properties:
+                      id:
+                        type: integer
+                      email:
+                        type: string
+                      role:
+                        type: string
+        '401':
+          description: Invalid credentials
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /auth/register:
+    post:
+      tags:
+        - Authentication
+      summary: Register new user
+      description: Registers a new HR user (admin access required)
+      operationId: registerUser
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - email
+                - password
+                - name
+              properties:
+                email:
+                  type: string
+                  format: email
+                password:
+                  type: string
+                  format: password
+                name:
+                  type: string
+                department:
+                  type: string
+      responses:
+        '201':
+          description: User created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  user_id:
+                    type: integer
+        '400':
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Forbidden (insufficient permissions)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /dashboard:
+    get:
+      tags:
+        - Dashboard
+      summary: Get dashboard data
+      description: Returns overall dashboard data with sentiment scores and counts
+      operationId: getDashboardData
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: department
+          in: query
+          schema:
+            type: string
+          description: Optional department filter
+        - name: location
+          in: query
+          schema:
+            type: string
+          description: Optional location filter
+      responses:
+        '200':
+          description: Dashboard data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DashboardData'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /dashboard/department-comparison:
+    get:
+      tags:
+        - Dashboard
+      summary: Get department comparison
+      description: Provides sentiment comparison data across departments
+      operationId: getDepartmentComparison
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: time_period
+          in: query
+          schema:
+            type: string
+            enum: [week, month, quarter, year]
+            default: month
+          description: Time period for data
+      responses:
+        '200':
+          description: Department comparison data
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  departments:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/DepartmentStat'
+                  time_period:
+                    type: string
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /dashboard/time-series:
+    get:
+      tags:
+        - Dashboard
+      summary: Get time series data
+      description: Returns time series data for sentiment trends
+      operationId: getTimeSeriesData
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: department
+          in: query
+          schema:
+            type: string
+          description: Optional department filter
+        - name: time_period
+          in: query
+          schema:
+            type: string
+            enum: [week, month, quarter, year]
+            default: month
+          description: Time period for data
+        - name: granularity
+          in: query
+          schema:
+            type: string
+            enum: [day, week, month]
+          description: Data granularity
+      responses:
+        '200':
+          description: Time series data
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        date:
+                          type: string
+                          format: date
+                        sentiment:
+                          type: number
+                          format: float
+                  department:
+                    type: string
+                  time_period:
+                    type: string
+                  granularity:
+                    type: string
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /dashboard/department/{department}/details:
+    get:
+      tags:
+        - Dashboard
+      summary: Get department details
+      description: Retrieves detailed information for a specific department
+      operationId: getDepartmentDetails
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: department
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Department name
+      responses:
+        '200':
+          description: Department details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DepartmentDetail'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Department not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /dashboard/keyword-stats:
+    get:
+      tags:
+        - Dashboard
+      summary: Get keyword statistics
+      description: Provides keyword statistics across all messages
+      operationId: getKeywordStats
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: department
+          in: query
+          schema:
+            type: string
+          description: Optional department filter
+        - name: location
+          in: query
+          schema:
+            type: string
+          description: Optional location filter
+      responses:
+        '200':
+          description: Keyword statistics
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    keyword:
+                      type: string
+                    total_count:
+                      type: string
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /dashboard/sentiment-trends:
+    get:
+      tags:
+        - Dashboard
+      summary: Get sentiment trends
+      description: Get sentiment analysis trends over time
+      operationId: getSentimentTrends
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: start_date
+          in: query
+          schema:
+            type: string
+            format: date
+          description: Start date for trend data
+        - name: end_date
+          in: query
+          schema:
+            type: string
+            format: date
+          description: End date for trend data
+        - name: department
+          in: query
+          schema:
+            type: string
+          description: Optional department filter
+      responses:
+        '200':
+          description: Sentiment trend data
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  trends:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        date:
+                          type: string
+                          format: date
+                        sentiment_score:
+                          type: number
+                          format: float
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /dashboard/risk-alerts:
+    get:
+      tags:
+        - Dashboard
+      summary: Get risk alerts
+      description: Get current risk alerts based on sentiment analysis
+      operationId: getRiskAlerts
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Risk alerts
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  alerts:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        level:
+                          type: string
+                          enum: [low, medium, high]
+                        department:
+                          type: string
+                        description:
+                          type: string
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /dashboard/export-report:
+    post:
+      tags:
+        - Dashboard
+      summary: Export report
+      description: Generate and export analytics report
+      operationId: exportReport
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                type:
+                  type: string
+                  enum: [sentiment, keywords, engagement, comprehensive]
+                  default: sentiment
+                format:
+                  type: string
+                  enum: [pdf, csv, json, excel]
+                  default: pdf
+                time_period:
+                  type: string
+                  enum: [week, month, quarter, year]
+                  default: month
+      responses:
+        '200':
+          description: Report generated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                  report_id:
+                    type: string
+                  report_url:
+                    type: string
+                  report_type:
+                    type: string
+                  expires_at:
+                    type: string
+                    format: date-time
+        '400':
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /bot:
+    post:
+      tags:
+        - WhatsApp Bot
+      summary: Webhook endpoint
+      description: Webhook endpoint for WhatsApp messages via Twilio
+      operationId: botWebhook
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              required:
+                - Body
+                - From
+              properties:
+                Body:
+                  type: string
+                  description: Message content
+                From:
+                  type: string
+                  description: Sender's WhatsApp number (whatsapp:+1234567890)
+                To:
+                  type: string
+                  description: Recipient's WhatsApp number
+      responses:
+        '200':
+          description: Message processed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                  message:
+                    type: string
+        '400':
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /bot/send:
+    post:
+      tags:
+        - WhatsApp Bot
+      summary: Send message
+      description: Send a message to a WhatsApp user
+      operationId: sendMessage
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - phone_number
+                - message
+              properties:
+                phone_number:
+                  type: string
+                  description: Recipient's phone number
+                message:
+                  type: string
+                  description: Message content
+      responses:
+        '200':
+          description: Message sent
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                  message_id:
+                    type: string
+        '400':
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /bot/status:
+    post:
+      tags:
+        - WhatsApp Bot
+      summary: Message status
+      description: Handle message status updates from WhatsApp
+      operationId: messageStatus
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              required:
+                - MessageSid
+                - MessageStatus
+              properties:
+                MessageSid:
+                  type: string
+                  description: Message SID
+                MessageStatus:
+                  type: string
+                  description: Message status
+      responses:
+        '200':
+          description: Status update processed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                  message:
+                    type: string
+        '400':
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /bot/template:
+    post:
+      tags:
+        - WhatsApp Bot
+      summary: Send template
+      description: Send a template message to a WhatsApp user
+      operationId: sendTemplate
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - phone_number
+                - template_name
+              properties:
+                phone_number:
+                  type: string
+                  description: Recipient's phone number
+                template_name:
+                  type: string
+                  description: Template name
+                parameters:
+                  type: object
+                  additionalProperties: true
+                  description: Template parameters
+      responses:
+        '200':
+          description: Template sent
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                  template_name:
+                    type: string
+                  message_id:
+                    type: string
+        '400':
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /employees:
+    get:
+      tags:
+        - Employees
+      summary: List employees
+      description: Returns a list of employees
+      operationId: listEmployees
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: department
+          in: query
+          schema:
+            type: string
+          description: Optional department filter
+        - name: location
+          in: query
+          schema:
+            type: string
+          description: Optional location filter
+      responses:
+        '200':
+          description: List of employees
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Employee'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
+        status_code:
+          type: integer
+        timestamp:
+          type: string
+          format: date-time
+          
+    DashboardData:
+      type: object
+      properties:
+        sentiment_score:
+          type: integer
+        trend:
+          type: string
+          enum: [up, down, stable]
+        risk_level:
+          type: string
+          enum: [low, medium, high]
+        mental_health_score:
+          type: integer
+        departments:
+          type: array
+          items:
+            type: object
+            properties:
+              name:
+                type: string
+              count:
+                type: integer
+        locations:
+          type: array
+          items:
+            type: object
+            properties:
+              name:
+                type: string
+              count:
+                type: integer
+                
+    DepartmentStat:
+      type: object
+      properties:
+        name:
+          type: string
+        sentiment_score:
+          type: integer
+        trend:
+          type: string
+          enum: [up, down, stable]
+        risk_level:
+          type: string
+          enum: [low, medium, high]
+          
+    DepartmentDetail:
+      type: object
+      properties:
+        name:
+          type: string
+        sentiment_score:
+          type: integer
+        trend:
+          type: string
+          enum: [up, down, stable]
+        risk_level:
+          type: string
+          enum: [low, medium, high]
+        employee_count:
+          type: integer
+        top_keywords:
+          type: array
+          items:
+            type: object
+            properties:
+              keyword:
+                type: string
+              count:
+                type: integer
+                
+    Employee:
+      type: object
+      properties:
+        id:
+          type: integer
+        phone_number:
+          type: string
+        department:
+          type: string
+        location:
+          type: string
+        created_at:
+          type: string
+          format: date-time 

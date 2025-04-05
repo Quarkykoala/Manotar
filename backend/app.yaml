@@ -1,54 +1,10 @@
-<<<<<<< HEAD
-name: mental-health-bot
-region: blr1
-services:
-  - name: web
-    github:
-      repo: Quarkykoala/Manobal
-      branch: main
-      deploy_on_push: true
-    build_command: pip install -r requirements.txt
-    run_command: gunicorn app:app
-    environment_slug: python
-    instance_size_slug: basic-xxs
-    instance_count: 1
-    envs:
-      - key: DB_USER
-        value: ${db.USERNAME}
-      - key: DB_PASS
-        type: secret
-        value: ${db.PASSWORD}
-      - key: DB_HOST
-        value: ${db.HOSTNAME}
-      - key: DB_PORT
-        value: "25060"
-      - key: DB_NAME
-        value: defaultdb
-      - key: TWILIO_ACCOUNT_SID
-        value: AC48e52113db34586361c7651fb1cf43bd
-      - key: TWILIO_AUTH_TOKEN
-        type: secret
-        value: your-actual-token
-      - key: TWILIO_WHATSAPP_NUMBER
-        value: +14155238886
-      - key: GOOGLE_API_KEY
-        type: secret
-        value: your-actual-key
-      - key: FLASK_DEBUG
-        value: "False"
-
-databases:
-  - engine: MYSQL
-    name: db-mysql-blr1-03087
-    version: "8"
-    production: false
-=======
 runtime: python39
 
-entrypoint: gunicorn -b :$PORT app:app
+entrypoint: gunicorn -b :$PORT run:app
 
 env_variables:
   FLASK_ENV: "production"
+  FLASK_APP: "run.py"
 
 handlers:
   - url: /.*
@@ -69,4 +25,3 @@ inbound_services:
   - warmup
 
 env: standard
->>>>>>> 684b464c7 (Initial commit)

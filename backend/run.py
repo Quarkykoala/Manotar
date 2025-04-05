@@ -1,21 +1,20 @@
-#!/usr/bin/env python
 """
-Main entry point for the Manobal backend Flask application.
-This script imports the Flask app from the src package.
+Entry point for Manobal API
+
+This module serves as the main entry point for running the Flask application.
 """
+
 import os
-import sys
-from dotenv import load_dotenv
-
-# Add the current directory to the path so we can import from src
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-
-# Load environment variables from .env file
-load_dotenv()
-
+import logging
 from src.app import app
 
-if __name__ == "__main__":
-    debug = os.environ.get("FLASK_DEBUG", "False").lower() == "true"
-    port = int(os.environ.get("PORT", 5000))
-    app.run(host="0.0.0.0", port=port, debug=debug) 
+if __name__ == '__main__':
+    # Configure logging if not already done
+    if not logging.getLogger().handlers:
+        logging.basicConfig(level=logging.INFO)
+    
+    # Get port from environment or use default
+    port = int(os.getenv('PORT', 5000))
+    
+    # Run the Flask application
+    app.run(host='0.0.0.0', port=port, debug=os.getenv('FLASK_DEBUG', 'False') == 'True') 

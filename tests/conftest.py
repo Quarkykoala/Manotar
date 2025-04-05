@@ -1,8 +1,22 @@
+"""
+Pytest configuration file for Manobal tests.
+
+This module contains shared fixtures and configuration for all tests.
+"""
+
 import os
 import pytest
-from app import app, db, User, KeywordStat
+import sys
+from unittest.mock import MagicMock
 from dotenv import load_dotenv
 from sqlalchemy import text
+
+# Add parent directory to path so we can import backend modules
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+
+# Import backend application 
+from backend.src.app import app as flask_app
+from backend.src.models.models import db, User, KeywordStat, Message
 
 # Load test environment variables
 load_dotenv('.env.test')
@@ -16,6 +30,7 @@ def clear_db():
 
         # Clear tables in correct order
         KeywordStat.query.delete()
+        Message.query.delete()
         User.query.delete()
         
         db.session.commit()
@@ -28,47 +43,42 @@ def clear_db():
         raise e
 
 @pytest.fixture(scope='function')
-def test_app():
-    # Configure app for testing
-    app.config.update({
+def app():
+    """Create and configure a Flask app for testing."""
+    flask_app.config.update({
         'TESTING': True,
-        'SQLALCHEMY_DATABASE_URI': (
-            f'mysql+pymysql://{os.getenv("DB_USER")}:{os.getenv("DB_PASS")}'
-            f'@{os.getenv("DB_HOST")}/{os.getenv("DB_NAME")}_test'
-        ),
-        'SQLALCHEMY_TRACK_MODIFICATIONS': False
+        'SQLALCHEMY_DATABASE_URI': os.getenv('TEST_DATABASE_URL', 'sqlite:///:memory:'),
+        'SQLALCHEMY_TRACK_MODIFICATIONS': False,
+        'SECRET_KEY': 'test_secret_key',
     })
     
-    with app.app_context():
+    with flask_app.app_context():
         # Create all tables
         db.create_all()
         
         # Clear any existing data
         clear_db()
         
-        yield app
+        yield flask_app
         
         # Clean up
         clear_db()
+        db.session.remove()
 
 @pytest.fixture(scope='function')
-def test_client(test_app):
-    return test_app.test_client()
+def client(app):
+    """A test client for the app."""
+    return app.test_client()
 
 @pytest.fixture(scope='function')
-def test_db(test_app):
-    with test_app.app_context():
-        # Clear any existing data
-        clear_db()
-        
+def db_session(app):
+    """Database session for testing."""
+    with app.app_context():
         yield db
-        
-        # Clean up after test
-        clear_db()
 
 @pytest.fixture(scope='function')
-def sample_user(test_app, test_db):
-    with test_app.app_context():
+def sample_user(app, db_session):
+    with app.app_context():
         # Create new user
         user = User(
             phone_number='+1234567890',
@@ -76,10 +86,43 @@ def sample_user(test_app, test_db):
             department='Engineering',
             location='Mumbai'
         )
-        test_db.session.add(user)
-        test_db.session.commit()
+        db_session.session.add(user)
+        db_session.session.commit()
         
         yield user
-        
-        # Clean up
-        clear_db()
+
+@pytest.fixture
+def mock_twilio():
+    """Mock Twilio client for testing."""
+    mock = MagicMock()
+    mock.messages.create.return_value = MagicMock(sid="MOCK_SID")
+    return mock
+
+@pytest.fixture
+def mock_gemini():
+    """Mock Gemini model for testing."""
+    mock = MagicMock()
+    mock.generate_content.return_value = MagicMock(
+        text="I understand you're feeling stressed. That's completely normal. Would you like to talk about what's causing your stress?"
+    )
+    return mock
+
+@pytest.fixture
+def sample_employee_data():
+    """Sample employee data for testing."""
+    return {
+        'name': 'Test Employee',
+        'department': 'Engineering',
+        'phone_number': 'whatsapp:+1234567890',
+        'consent_given': True
+    }
+
+@pytest.fixture
+def sample_message_data():
+    """Sample message data for testing."""
+    return {
+        'from_user': 'whatsapp:+1234567890',
+        'to_user': 'whatsapp:+0987654321',
+        'body': 'I am feeling stressed today',
+        'direction': 'incoming'
+    }

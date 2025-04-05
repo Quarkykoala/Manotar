@@ -1,6 +1,9 @@
 """
-Utilities package for Manobal Platform
+Utilities package for backend services
 
-This package contains utility modules for error handling, audit logging,
-and other common functionality used throughout the application.
+Contains various utility functions and classes for the application.
 """
+
+from . import error_handler
+from . import audit_logger
+from . import auth

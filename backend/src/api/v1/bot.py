@@ -20,8 +20,9 @@ from nltk.tokenize import word_tokenize
 from nltk.corpus import stopwords
 from ...utils.audit_logger import audit_decorator, log_audit_event
 from ...utils.error_handler import api_route_wrapper, BadRequestError, ServerError
-from ...models.models import User, KeywordStat, Message
+from ...models.models import User, KeywordStat, Message, CheckIn
 from ...services import queue_sentiment_analysis
+from ...services.check_in_flow import handle_check_in_response, handle_timeout_checks
 
 # Create a Blueprint for the bot API
 bot_bp = Blueprint('bot_api_v1', __name__)
@@ -293,7 +294,8 @@ def bot():
                     
                     response_message = (
                         f"Thank you for providing your information. Now I'm ready to chat with you! "
-                        "How are you feeling today?"
+                        "How are you feeling today? You can also type 'start check-in' at any time "
+                        "to begin a structured check-in process."
                     )
                 
                 # Send response via Twilio
@@ -337,6 +339,66 @@ def bot():
             )
             
             return {"status": "success", "message": "Message limit reached"}
+            
+        # Process check-in flow if user has started a check-in
+        check_in_result = handle_check_in_response(user.id, incoming_msg)
+        if check_in_result['response_text']:
+            # Handle structured check-in flow
+            response_message = check_in_result['response_text']
+            
+            # Save user message to the database
+            user_message = Message(
+                user_id=user.id,
+                content=incoming_msg,
+                is_from_user=True,
+                department=user.department,
+                location=user.location,
+                timestamp=datetime.utcnow()
+            )
+            db.session.add(user_message)
+            
+            # Save AI response as a message
+            ai_message = Message(
+                user_id=user.id,
+                content=response_message,
+                is_from_user=False,
+                department=user.department,
+                location=user.location,
+                timestamp=datetime.utcnow()
+            )
+            db.session.add(ai_message)
+            db.session.commit()
+            
+            # Queue sentiment analysis for the message if appropriate
+            if check_in_result['check_in'] and check_in_result['check_in'].state == 'completed':
+                # Extract all text from the check-in for sentiment analysis
+                check_in = check_in_result['check_in']
+                combined_text = f"{check_in.mood_description or ''} {check_in.stress_factors or ''} {check_in.qualitative_feedback or ''}"
+                if combined_text.strip():
+                    queue_sentiment_analysis(user_message.id, user.id, combined_text)
+            else:
+                queue_sentiment_analysis(user_message.id, user.id)
+            
+            # Split response if it's too long for WhatsApp
+            response_chunks = split_message(response_message)
+            
+            # Send response via Twilio
+            for chunk in response_chunks:
+                message = client.messages.create(
+                    from_=f'whatsapp:{twilio_whatsapp_number}',
+                    body=chunk,
+                    to=f'whatsapp:{sender}'
+                )
+            
+            # Log the response (anonymized)
+            log_audit_event(
+                user_id="anonymized", 
+                action="send_response", 
+                target="whatsapp_bot",
+                details={"message_length": len(response_message), "chunks": len(response_chunks)}
+            )
+            
+            return {"status": "success", "message": "Check-in response sent"}
         
         # Normal conversation flow
         # Get conversation history or initialize it
@@ -439,4 +501,179 @@ def bot():
         except:
             pass
         
+        raise
+
+@bot_bp.route('/check-timeout', methods=['GET'])
+@api_route_wrapper
+def check_timeout():
+    """
+    Check for timed-out check-in sessions and mark them as expired
+    
+    This endpoint can be called by a scheduled task to maintain conversation state.
+    
+    Returns:
+        JSON with information about processed timeouts
+    """
+    result = handle_timeout_checks()
+    return jsonify({
+        "status": "success",
+        "warnings_sent": result['warnings'],
+        "expired_sessions": result['expirations']
+    }), 200
+
+@bot_bp.route('/send', methods=['POST'])
+@api_route_wrapper
+@audit_decorator("send", "whatsapp_message")
+def send_message():
+    """
+    Send a message to a WhatsApp user.
+    
+    Request Body:
+    {
+        "phone_number": "whatsapp:+1234567890",
+        "message": "Hello from Manobal!"
+    }
+    
+    Returns:
+        JSON with status and message ID
+    """
+    try:
+        data = request.get_json()
+        
+        if not data:
+            raise BadRequestError("Missing request body")
+            
+        phone_number = data.get('phone_number')
+        message_content = data.get('message')
+        
+        if not phone_number or not message_content:
+            raise BadRequestError("Missing required fields: phone_number, message")
+        
+        # Ensure phone number has whatsapp: prefix
+        if not phone_number.startswith('whatsapp:'):
+            phone_number = f'whatsapp:{phone_number}'
+            
+        # Send message via Twilio
+        try:
+            message = client.messages.create(
+                from_=f'whatsapp:{twilio_whatsapp_number}',
+                body=message_content,
+                to=phone_number
+            )
+            
+            return {
+                "status": "success",
+                "message_id": message.sid
+            }
+        except Exception as e:
+            current_app.logger.error(f"Error sending WhatsApp message: {str(e)}")
+            raise ServerError("Failed to send WhatsApp message")
+    except BadRequestError:
+        raise
+    except Exception as e:
+        current_app.logger.error(f"Error in send message: {str(e)}")
+        raise
+
+@bot_bp.route('/status', methods=['POST'])
+@api_route_wrapper
+def message_status():
+    """
+    Handle message status updates from WhatsApp.
+    
+    This endpoint receives status updates from Twilio about message delivery.
+    
+    Returns:
+        JSON with status
+    """
+    try:
+        # Extract status data from request
+        message_sid = request.form.get('MessageSid')
+        message_status = request.form.get('MessageStatus')
+        
+        if not message_sid or not message_status:
+            raise BadRequestError("Missing required fields: MessageSid, MessageStatus")
+        
+        # Log status update
+        current_app.logger.info(f"Message {message_sid} status: {message_status}")
+        
+        # In a real implementation, you'd update the message status in your database
+        
+        return {
+            "status": "success",
+            "message": "Status update processed"
+        }
+    except BadRequestError:
+        raise
+    except Exception as e:
+        current_app.logger.error(f"Error processing status update: {str(e)}")
+        raise
+
+@bot_bp.route('/template', methods=['POST'])
+@api_route_wrapper
+@audit_decorator("send", "whatsapp_template")
+def send_template():
+    """
+    Send a template message to a WhatsApp user.
+    
+    Request Body:
+    {
+        "phone_number": "whatsapp:+1234567890",
+        "template_name": "appointment_reminder",
+        "parameters": {
+            "name": "John Doe",
+            "time": "3:00 PM"
+        }
+    }
+    
+    Returns:
+        JSON with status and message ID
+    """
+    try:
+        data = request.get_json()
+        
+        if not data:
+            raise BadRequestError("Missing request body")
+            
+        template_name = data.get('template_name')
+        phone_number = data.get('phone_number')
+        parameters = data.get('parameters', {})
+        
+        if not template_name or not phone_number:
+            raise BadRequestError("Missing required fields: template_name, phone_number")
+        
+        # Ensure phone number has whatsapp: prefix
+        if not phone_number.startswith('whatsapp:'):
+            phone_number = f'whatsapp:{phone_number}'
+            
+        # In a real implementation, you'd format the template with parameters
+        # and send it via Twilio's API
+        
+        # Placeholder for template implementation
+        template_message = f"This is a template message: {template_name}"
+        
+        if parameters:
+            # Simple parameter replacement
+            for key, value in parameters.items():
+                template_message = template_message.replace(f"{{{key}}}", str(value))
+        
+        # Send message via Twilio
+        try:
+            message = client.messages.create(
+                from_=f'whatsapp:{twilio_whatsapp_number}',
+                body=template_message,
+                to=phone_number
+            )
+            
+            return {
+                "status": "success",
+                "template_name": template_name,
+                "message_id": message.sid
+            }
+        except Exception as e:
+            current_app.logger.error(f"Error sending template: {str(e)}")
+            raise ServerError("Failed to send template message")
+    except BadRequestError:
+        raise
+    except Exception as e:
+        current_app.logger.error(f"Error in send template: {str(e)}")
         raise

@@ -3,36 +3,61 @@ API package initializer
 
 This file sets up the API package and registers versioned API blueprints.
 """
-from flask import Blueprint
+from flask import Flask, Blueprint, g, request, current_app
+import logging
+from backend.src.api.v1 import v1_bp
 
-# Main API blueprint
-api_bp = Blueprint('api', __name__, url_prefix='/api')
-
-def register_blueprints(app):
+def create_api_blueprint():
     """
-    Register all API blueprints with the Flask app
-    
-    Args:
-        app: Flask application instance
+    Create and configure the API blueprint with all routes
     """
-    # Import versioned API blueprints
-    from .v1.dashboard import dashboard_bp
-    from .v1.bot import bot_bp
-    from .v1.auth import auth_bp
+    # Create the main API blueprint
+    api_bp = Blueprint('api', __name__, url_prefix='/api')
     
-    # Register v1 API blueprints
-    v1_bp = Blueprint('v1', __name__, url_prefix='/v1')
-    v1_bp.register_blueprint(dashboard_bp, url_prefix='/dashboard')
-    v1_bp.register_blueprint(bot_bp, url_prefix='/bot')
-    v1_bp.register_blueprint(auth_bp, url_prefix='/auth')
-    
-    # Register the v1 blueprint with the main API blueprint
+    # Register the v1 blueprint
     api_bp.register_blueprint(v1_bp)
     
-    # Register the main API blueprint with the app
+    return api_bp
+
+def init_app(app: Flask):
+    """
+    Initialize the API with the Flask application
+    """
+    # Register the API blueprint
+    api_bp = create_api_blueprint()
     app.register_blueprint(api_bp)
     
-    # Log registered routes
-    app.logger.info("API routes registered:")
-    for rule in app.url_map.iter_rules():
-        app.logger.info(f"{rule.endpoint}: {rule}") 
+    # Register middleware to add API version header
+    @app.after_request
+    def add_api_version_header(response):
+        """Add API version header to all responses from versioned API endpoints"""
+        if request.path.startswith('/api/v'):
+            # Extract version from path
+            path_parts = request.path.split('/')
+            if len(path_parts) > 2:
+                version = path_parts[2]  # '/api/v1/...' -> 'v1'
+                
+                # Add version header
+                response.headers['X-API-Version'] = version
+                
+                # Add deprecation header if needed
+                if version == 'v1':
+                    # v1 is not deprecated yet
+                    response.headers['X-API-Deprecated'] = 'false'
+                else:
+                    # Future versions may deprecate older ones
+                    pass
+                    
+        return response
+    
+    # Log all registered routes for debugging
+    @app.before_first_request
+    def log_routes():
+        """Log all registered routes for debugging"""
+        routes = []
+        for rule in app.url_map.iter_rules():
+            routes.append(f"{rule.endpoint}: {rule.rule} [{', '.join(rule.methods)}]")
+        
+        app.logger.info(f"Registered routes:\n" + "\n".join(routes))
+    
+    return app 
